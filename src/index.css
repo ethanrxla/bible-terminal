@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+
+  [data-font-size="small"] .font-verse {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  [data-font-size="medium"] .font-verse {
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  [data-font-size="large"] .font-verse {
+    font-size: 1.25rem;
+    line-height: 1.8;
+  }
+
+  [data-font-size="extra-large"] .font-verse {
+    font-size: 1.5rem;
+    line-height: 1.9;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-amber-700/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-amber-700/50;
+  }
+}
+
+@layer components {
+  .font-terminal {
+    font-family: 'Courier Prime', monospace;
+  }
+  
+  .font-verse {
+    font-family: 'EB Garamond', serif;
+  }
+  
+  .font-heading {
+    font-family: 'Cinzel', serif;
+  }
+  
+  .typewriter {
+    overflow: hidden;
+    border-right: 0.15em solid;
+    white-space: nowrap;
+    margin: 0 auto;
+    letter-spacing: 0.05em;
+    animation: 
+      typing 3.5s steps(40, end),
+      blink-caret 0.75s step-end infinite;
+  }
+  
+  @keyframes typing {
+    from { width: 0 }
+    to { width: 100% }
+  }
+  
+  @keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: currentColor }
+  }
+  
+  .fade-in {
+    animation: fadeIn 1.5s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 47,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:39:19.889Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter Forty-Seven: Concerning the Laying On of Hands upon Catechumens or Neophytes"
+  }
+}

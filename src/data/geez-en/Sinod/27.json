@@ -1,0 +1,11 @@
+{
+  "book": "Sinod",
+  "label": "Sinodos",
+  "chapter": 27,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:09:39.665Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "The Council and Canons of Laodicea"
+  }
+}

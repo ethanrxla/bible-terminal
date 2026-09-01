@@ -1,0 +1,11 @@
+{
+  "book": "Sinod",
+  "label": "Sinodos",
+  "chapter": 31,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:11:08.453Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Epistle to the Alexandrians"
+  }
+}

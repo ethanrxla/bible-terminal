@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 28,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:29:39.640Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter Twenty-Eight: Concerning those who are saved and those who perish."
+  }
+}

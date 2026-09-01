@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 33,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:32:59.991Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 33: Of the Order of Service in the Church"
+  }
+}

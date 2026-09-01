@@ -1,0 +1,11 @@
+{
+  "book": "Lef",
+  "label": "Lefafa Sedq",
+  "chapter": 1,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:50:38.802Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "The First Prayer"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 31,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:31:53.406Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 31: Concerning the Duties of a Deacon"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 11,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:07:37.129Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "The teacher is death to the ignorant, and a driver away to destruction, and a watchman of the flock, and a strengthener, and a worker for Satan before your gods. And he who drives out your dominion by fasting and prayer and night vigil. And let your teaching be established, and your house, and your congregation; and guard the refined wisdom and faith."
+  }
+}

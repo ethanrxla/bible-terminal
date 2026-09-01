@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 13,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:09:01.816Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And because you saw Nadab the priest and his companion consumed, and he took up the office, he shall be purified, because he ministered to the people; and he shall be a minister to all the priests of God, and because he blessed the people for everlasting generations."
+  }
+}

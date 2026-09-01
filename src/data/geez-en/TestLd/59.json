@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 59,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:44:48.014Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 59: Concerning the Prayers of the People"
+  }
+}

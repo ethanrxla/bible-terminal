@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 21,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:24:26.949Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And he begot his glory at his feet, and his deeds, and his obedience, and his words; and a man was justified, because his sin was not cut off; and he spoke, and he died in his repentance; he hid his fruit from God."
+  }
+}

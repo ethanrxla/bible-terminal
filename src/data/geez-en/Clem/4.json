@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 4,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:52:12.522Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And he stood up on the first day of the week in the midst of the disciples, and he said, and he himself spoke from his mouth: \"I, Peter, the chief of the apostles.\" And he appointed them to be as Simon who is called Peter, and Judas Iscariot."
+  }
+}

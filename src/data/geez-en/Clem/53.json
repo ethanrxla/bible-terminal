@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 53,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:18:16.200Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And it came to pass in the whole house of the sanctuary, its vessels together with one that they did not keep in its place, just as the little Israel that was in the wilderness they kept in its place, and all that they did not keep in its place."
+  }
+}

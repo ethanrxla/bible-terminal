@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 39,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:55:27.702Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And they beheld his glory in the highest heaven, and the descent of the Holy Spirit upon the apostles; because there descended upon their mouths from heaven like tongues of fire, and they spoke the words which they had seen and heard before the nations, and they bore witness. And he from his glory went to Christ in heaven, who ascended from us in a cloud of light, from the mountain, save that he came from the glory of his resurrection on the fourth day."
+  }
+}

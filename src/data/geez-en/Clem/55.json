@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 55,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:22:10.400Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And for the sake of the man at his right hand, he stretched out his stature upon the cross. And he went and marveled at the nations. And he swallowed up their devouring, and drew near to them, and drew near to him, and gathered them, and entered into the sea from his cross. They shall be born, and he shall gather him again."
+  }
+}

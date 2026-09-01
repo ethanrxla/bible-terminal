@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 55,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:42:29.889Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 55: Concerning Fruits Which Are Offered"
+  }
+}

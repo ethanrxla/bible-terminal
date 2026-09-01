@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 19,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:24:39.667Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 19: The Prayer of the Bishop"
+  }
+}

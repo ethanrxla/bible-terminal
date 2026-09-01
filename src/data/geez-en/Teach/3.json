@@ -1,0 +1,11 @@
+{
+  "book": "Teach",
+  "label": "Teaching of Mysteries",
+  "chapter": 3,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:52:48.562Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 3"
+  }
+}

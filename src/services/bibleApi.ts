@@ -126,9 +126,24 @@ export const BIBLE_BOOKS = [
   { id: 'REV', name: 'Revelation', chapters: 22 }
 ];
 
+const NEW_TESTAMENT_BOOK_IDS = new Set([
+  'MAT', 'MRK', 'LUK', 'JHN', 'ACT', 'ROM', '1CO', '2CO', 'GAL', 'EPH',
+  'PHP', 'COL', '1TH', '2TH', '1TI', '2TI', 'TIT', 'PHM', 'HEB', 'JAS',
+  '1PE', '2PE', '1JN', '2JN', '3JN', 'JUD', 'REV'
+]);
+
+export function isNewTestament(bookId: string): boolean {
+  return NEW_TESTAMENT_BOOK_IDS.has(bookId.toUpperCase());
+}
+
+export function testamentOf(bookId: string): 'old' | 'new' {
+  return isNewTestament(bookId) ? 'new' : 'old';
+}
+
 class BibleApiService {
   private baseUrl = 'https://bible-api.com';
-  private cache = new Map<string, any>();
+  private verseCache = new Map<string, BibleVerse>();
+  private chapterCache = new Map<string, BibleChapter>();
 
   // Get a random verse from the entire Bible or specific books
   async getRandomVerse(translation: string = 'web', bookIds?: string[]): Promise<BibleVerse> {
@@ -149,17 +164,26 @@ class BibleApiService {
       }
 
       const data = await response.json();
-      console.log('Received verse data:', data);
+
+      // This endpoint nests the verse under `random_verse` and returns no
+      // `reference` field, so the reference has to be composed by hand.
+      const picked = data.random_verse;
+      if (!picked || typeof picked.text !== 'string') {
+        throw new Error('Random verse response did not contain a verse');
+      }
+
+      const bookName = picked.book || picked.book_name || '';
+      console.log('Received random verse:', `${bookName} ${picked.chapter}:${picked.verse}`);
 
       return {
-        text: data.text,
-        reference: data.reference,
+        text: picked.text.trim(),
+        reference: `${bookName} ${picked.chapter}:${picked.verse}`,
         translation_id: translation,
         translation_name: this.getTranslationName(translation),
-        book_id: data.book_id || '',
-        book_name: data.book_name || '',
-        chapter: data.chapter || 1,
-        verse: data.verse || 1
+        book_id: picked.book_id || '',
+        book_name: bookName,
+        chapter: picked.chapter || 1,
+        verse: picked.verse || 1
       };
     } catch (error) {
       console.error('Error fetching random verse:', error);
@@ -173,9 +197,10 @@ class BibleApiService {
       const url = `${this.baseUrl}/${encodeURIComponent(reference)}?translation=${translation}`;
       const cacheKey = `verse-${translation}-${reference}`;
 
-      if (this.cache.has(cacheKey)) {
+      const cached = this.verseCache.get(cacheKey);
+      if (cached) {
         console.log('Returning cached verse:', reference);
-        return this.cache.get(cacheKey);
+        return cached;
       }
 
       console.log('Fetching verse from:', url);
@@ -203,7 +228,7 @@ class BibleApiService {
         verse: parsedRef.verse
       };
 
-      this.cache.set(cacheKey, verse);
+      this.verseCache.set(cacheKey, verse);
       return verse;
     } catch (error) {
       console.error('Error fetching verse:', error);
@@ -244,8 +269,9 @@ class BibleApiService {
       const url = `${this.baseUrl}/data/${translation}/${bookId.toUpperCase()}/${chapter}`;
       const cacheKey = `chapter-${translation}-${bookId}-${chapter}`;
       
-      if (this.cache.has(cacheKey)) {
-        return this.cache.get(cacheKey);
+      const cached = this.chapterCache.get(cacheKey);
+      if (cached) {
+        return cached;
       }
 
       const response = await fetch(url);
@@ -258,7 +284,7 @@ class BibleApiService {
       
       const chapterData: BibleChapter = {
         reference: `${book?.name || bookId} ${chapter}`,
-        verses: data.verses.map((v: any, index: number) => ({
+        verses: data.verses.map((v: { text: string }, index: number) => ({
           text: v.text,
           reference: `${book?.name || bookId} ${chapter}:${index + 1}`,
           translation_id: translation,
@@ -275,7 +301,7 @@ class BibleApiService {
         chapter: chapter
       };
 
-      this.cache.set(cacheKey, chapterData);
+      this.chapterCache.set(cacheKey, chapterData);
       return chapterData;
     } catch (error) {
       console.error('Error fetching chapter:', error);
@@ -416,7 +442,8 @@ class BibleApiService {
 
   // Clear cache (useful for memory management)
   clearCache(): void {
-    this.cache.clear();
+    this.verseCache.clear();
+    this.chapterCache.clear();
   }
 }
 

@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 27,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:29:21.740Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Of those who hear and are diligent"
+  }
+}

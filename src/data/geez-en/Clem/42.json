@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 42,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:08:51.477Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And he spoke unto his son in a time of affliction, because great was the affliction which was not permitted before God; because the Godhead of God is light. And it was spoken unto me and given unto me from Him, and He who took a believing servant. And let him draw near for the sake of his body unto the priests, as one not anointed and not sprinkled upon the earth, but in the spirit of the angel of the earth."
+  }
+}

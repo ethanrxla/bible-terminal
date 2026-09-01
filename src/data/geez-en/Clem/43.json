@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 43,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:56:58.808Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "The son of the commandment of his command, as Jesus the son of Nun commanded, the brother of Moses commanded."
+  }
+}

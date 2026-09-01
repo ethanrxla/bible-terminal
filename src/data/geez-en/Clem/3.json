@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 3,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:46:36.189Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "He said to me, \"My son Clement, you have been commanded to go in the power, and he gave a sign for baptism.\""
+  }
+}

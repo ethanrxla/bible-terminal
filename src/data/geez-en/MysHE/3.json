@@ -1,0 +1,11 @@
+{
+  "book": "MysHE",
+  "label": "Mysteries of Heaven & Earth",
+  "chapter": 3,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:48:43.287Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "In the name of the Father, the First. The book of the power and the wonders which God displayed to Peter, the chief of the apostles, the pillar of the kingdom of the heavens, the gate which was opened from the mouth of the tongue of the mercy of righteousness: how he opened it and made it wide and gave that which was commanded to those who believe in righteousness and in truth. And he gathered those who believe, showing how they shall enter into the inner sanctuary, the gate of the kingdom of the heaven of heavens."
+  }
+}

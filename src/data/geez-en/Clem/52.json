@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 52,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:16:47.900Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "According to the ordinance of Moses. And they appointed bishops for Moses and their ministers in the wilderness at the first time, when the elders, the priests, the Levites, and the congregation, and all the deacons assembled, that they might be for glory and praise. And likewise in the synagogues and in the temples they read from Moses and the Gospel of John, because he was a prophet who was sent."
+  }
+}

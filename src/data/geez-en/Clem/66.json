@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 66,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:45:34.261Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And the commandment and the Son, even as all that you have commanded, by the commandment of God you have commanded."
+  }
+}

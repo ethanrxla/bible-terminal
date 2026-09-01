@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 57,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:26:22.375Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And when the people cried out, the priest Ragemo was ordained from the presence of God, and he established Christianity in the land of Alwan. And when he was zealous for the sake of God, he took Albas, who had been appointed priest; and he fasted thirty years, and he performed the priestly atonement for sins."
+  }
+}

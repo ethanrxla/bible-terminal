@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 45,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:37:39.467Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 45: Of the Kiss of Peace"
+  }
+}

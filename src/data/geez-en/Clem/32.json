@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 32,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:46:59.376Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And when you hallow your mind, you believe your body and all your flesh to be prepared; and for your sanctification you choose the blessed presence from the bones of heaven, from of old you choose."
+  }
+}

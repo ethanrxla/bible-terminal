@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 26,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:33:06.422Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And he prayed in the morning, and at the third hour, and at evening, and at noon; for these are the three appointed times of prayer for all the priests and the people: and they pray, and they proclaim, and they offer incense."
+  }
+}

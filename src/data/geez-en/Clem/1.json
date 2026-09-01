@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 1,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:45:16.547Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "This is the Council of Clement, which Peter, the chief of the apostles, wrote, who spoke in the name of the Lord Jesus Christ."
+  }
+}

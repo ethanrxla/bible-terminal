@@ -1,0 +1,11 @@
+{
+  "book": "Sinod",
+  "label": "Sinodos",
+  "chapter": 23,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:07:17.630Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "The Council of Gangra"
+  }
+}

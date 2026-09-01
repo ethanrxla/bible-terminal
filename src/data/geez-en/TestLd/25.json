@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 25,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:28:54.488Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter Twenty-Five: Concerning the Priest's Devotion to the Altar and to Prayer"
+  }
+}

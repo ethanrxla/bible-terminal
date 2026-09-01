@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 65,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:43:48.415Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "He said to you, and to your son Clement, and to them: just as in the bath, when you open the place of the faithful, and they were commanded not to enter, in that he showed you the Holy Spirit which does not cease, that you may enter; and for eternity he appointed that the kingdom should last until the day of judgment which does not end, before Christ."
+  }
+}

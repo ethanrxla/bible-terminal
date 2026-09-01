@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 18,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:24:21.792Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 18: The Prayer of the Deacon after all the people have received."
+  }
+}

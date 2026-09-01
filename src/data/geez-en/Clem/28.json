@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 28,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:35:52.388Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And I, Peter, commanded the believers that they should know from their deeds and their conduct in their assembly at the hearing."
+  }
+}

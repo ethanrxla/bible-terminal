@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 31,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:44:38.161Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And because he did so, as he approaches the sanctuary of God with faith and faithfulness, their hearing is confirmed. And he offered the offering of the faithful, and purified the body of the holy man whom I saw clothed in a white garment that descended upon him in the land of Joppa; for he is holy, the whole man entirely."
+  }
+}

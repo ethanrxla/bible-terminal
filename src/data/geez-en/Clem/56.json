@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 56,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:24:08.076Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And when the people who entered with the holy God were sanctified at that time, sinners cleansed themselves from their iniquity, and they stood before the house of the Christians seven years, and he showed the man his soul."
+  }
+}

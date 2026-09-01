@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 32,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:32:41.850Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 32: Concerning the number of Priests, Deacons, and Subdeacons in a church."
+  }
+}

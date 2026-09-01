@@ -1,5 +1,5 @@
 import React from 'react';
-import { SearchResult } from '../services/bibleApi';
+import { SearchResult, testamentOf } from '../services/bibleApi';
 import { BookOpen, ExternalLink } from 'lucide-react';
 
 interface SearchResultsProps {
@@ -43,12 +43,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({ results, onVerseClick }) 
               <div className="flex items-center gap-2">
                 <span className={`
                   px-2 py-1 text-xs font-terminal rounded-full
-                  ${result.verse.testament === 'old'
+                  ${testamentOf(result.verse.book_id) === 'old'
                     ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
                     : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
                   }
                 `}>
-                  {result.verse.testament === 'old' ? 'OT' : 'NT'}
+                  {testamentOf(result.verse.book_id) === 'old' ? 'OT' : 'NT'}
                 </span>
                 <span className="font-terminal text-sm font-bold text-amber-600 dark:text-amber-400">
                   {result.verse.reference}

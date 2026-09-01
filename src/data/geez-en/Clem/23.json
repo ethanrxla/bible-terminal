@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 23,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:28:43.974Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "They ordained for the departed commemorations on the third day, and on the seventh, and on the tenth, and on the twentieth, and on the thirtieth, and on the fortieth, and on the sixtieth. And they ordained for the child, as on the fortieth day, or his repose: that his soul may be delivered from death, because he rejected sin before Christ; and he shall perish according to his deed, and he shall be cut off in his time, his work."
+  }
+}

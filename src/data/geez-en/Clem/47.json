@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 47,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:14:44.686Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And for the sake of his faith he fasted to establish the commandment, for five and thirty and fifty days; and he remained for forty days in the church of the Christians for ten years."
+  }
+}

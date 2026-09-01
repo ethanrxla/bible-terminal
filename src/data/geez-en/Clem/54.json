@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 54,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:20:03.429Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And when it was broken by those who did not keep it, He made the man stumble, those who were sanctified by the giving of their holiness from them; even as He gave holiness to the little ones of Israel from their birth, and they were born and shall be sanctified also."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 42,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:36:30.997Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 42: Concerning the Laity"
+  }
+}

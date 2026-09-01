@@ -17,8 +17,6 @@ const MultiTranslationVerse: React.FC<MultiTranslationVerseProps> = ({ verses, t
 
   if (verses.length === 0) return null;
 
-  const primaryVerse = verses[0];
-
   return (
     <div className={`
       space-y-4

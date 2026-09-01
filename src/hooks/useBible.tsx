@@ -1,47 +1,84 @@
 import { useState, useCallback } from 'react';
-import { bibleApiService, BibleVerse, SearchResult, AVAILABLE_TRANSLATIONS } from '../services/bibleApi';
+import { bibleApiService, BibleVerse, SearchResult, AVAILABLE_TRANSLATIONS, testamentOf } from '../services/bibleApi';
+import type { VerseContext } from '../services/canonRouter';
+import {
+  currentHourKey,
+  getHourlyContent,
+  type HourlySlot,
+} from '../services/hourly';
+import type { CanonSection } from '../types/canon';
 
 export interface BibleContent extends BibleVerse {
   title?: string;
   type: 'verse' | 'passage' | 'story';
   testament: 'old' | 'new';
+  /** Display alias for `book_name`, used by the verse/passage cards. */
+  book?: string;
+  /** Where the book sits in the EOTC canon; drives the AI's reading tradition. */
+  section?: CanonSection;
+  geezName?: string;
+  /** Surrounding verses, so the interpretation can discuss the setting. */
+  context?: VerseContext;
+  /** Immutable server edition that owns this content and its interpretation. */
+  hourlyHour?: string;
+  hourlySlot?: HourlySlot;
 }
 
 export const useBible = () => {
   const [dailyVerse, setDailyVerse] = useState<BibleContent | null>(null);
   const [dailyPassage, setDailyPassage] = useState<BibleContent | null>(null);
+  const [ethiopianVerse, setEthiopianVerse] = useState<BibleContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hourlyError, setHourlyError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedTranslations, setSelectedTranslations] = useState<string[]>(['web', 'kjv']);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Function to get hourly content from Bible API
+  /**
+   * Loads the server-owned UTC edition. The endpoint's deterministic selection
+   * and CDN cache mean every visitor receives these exact same three slots.
+   * `force` only bypasses this browser's cache; it never redraws the edition.
+   */
   const fetchData = useCallback(async () => {
     setIsLoading(true);
-    
-    try {
-      // Get random content from the primary translation
-      const primaryTranslation = selectedTranslations[0] || 'web';
-      const { verse, passage } = await bibleApiService.getHourlyContent(primaryTranslation);
-      
-      // Convert API response to our BibleContent format
-      const convertToBibleContent = (apiVerse: BibleVerse): BibleContent => ({
-        ...apiVerse,
-        type: 'verse' as const,
-        testament: isNewTestament(apiVerse.book_id) ? 'new' : 'old',
-        book: apiVerse.book_name
-      });
-      
-      setDailyVerse(convertToBibleContent(verse));
-      setDailyPassage(convertToBibleContent(passage));
-    } catch (error) {
-      console.error('Error fetching Bible content:', error);
-      // Keep existing content if API fails
-    } finally {
-      setIsLoading(false);
+    setHourlyError(null);
+    const hour = currentHourKey();
+    const [verseResult, passageResult, ethiopianResult] = await Promise.allSettled([
+      getHourlyContent(hour, 'verse').then((content) => {
+        setDailyVerse(content);
+        setIsLoading(false);
+        return content;
+      }),
+      getHourlyContent(hour, 'passage').then((content) => {
+        setDailyPassage(content);
+        setIsLoading(false);
+        return content;
+      }),
+      getHourlyContent(hour, 'ethiopian').then((content) => {
+        setEthiopianVerse(content);
+        setIsLoading(false);
+        return content;
+      }),
+    ]);
+    if (verseResult.status === 'rejected') {
+      console.error('Error fetching hourly verse:', verseResult.reason);
     }
-  }, [selectedTranslations]);
+    if (passageResult.status === 'rejected') {
+      console.error('Error fetching hourly passage:', passageResult.reason);
+    }
+    if (ethiopianResult.status === 'rejected') {
+      console.error('Error fetching Ethiopian canon verse:', ethiopianResult.reason);
+    }
+    if (
+      verseResult.status === 'rejected' &&
+      passageResult.status === 'rejected' &&
+      ethiopianResult.status === 'rejected'
+    ) {
+      setHourlyError('Scripture sources are temporarily unavailable. Reload this hour’s edition to try again.');
+    }
+    setIsLoading(false);
+  }, []);
 
   // Search function
   const searchBible = useCallback(async (query: string) => {
@@ -92,7 +129,7 @@ export const useBible = () => {
       return verses.map(verse => ({
         ...verse,
         type: 'verse' as const,
-        testament: isNewTestament(verse.book_id) ? 'new' : 'old',
+        testament: testamentOf(verse.book_id),
         book: verse.book_name
       }));
     } catch (error) {
@@ -110,8 +147,10 @@ export const useBible = () => {
   return {
     dailyVerse,
     dailyPassage,
+    ethiopianVerse,
     fetchData,
     isLoading,
+    hourlyError,
     searchResults,
     isSearching,
     searchQuery,
@@ -123,13 +162,3 @@ export const useBible = () => {
     availableTranslations: AVAILABLE_TRANSLATIONS
   };
 };
-
-// Helper function to determine if a book is in the New Testament
-function isNewTestament(bookId: string): boolean {
-  const newTestamentBooks = [
-    'MAT', 'MRK', 'LUK', 'JHN', 'ACT', 'ROM', '1CO', '2CO', 'GAL', 'EPH', 
-    'PHP', 'COL', '1TH', '2TH', '1TI', '2TI', 'TIT', 'PHM', 'HEB', 'JAS', 
-    '1PE', '2PE', '1JN', '2JN', '3JN', 'JUD', 'REV'
-  ];
-  return newTestamentBooks.includes(bookId.toUpperCase());
-}

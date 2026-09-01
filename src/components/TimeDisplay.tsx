@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Clock } from 'lucide-react';
+import { millisecondsUntilNextHour } from '../services/hourly';
 
 const TimeDisplay: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -13,17 +14,8 @@ const TimeDisplay: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const getNextUpdateTime = () => {
-    const now = new Date();
-    const nextHour = new Date(now);
-    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-    return nextHour;
-  };
-
   const getTimeUntilUpdate = () => {
-    const now = new Date();
-    const nextUpdate = getNextUpdateTime();
-    const diff = nextUpdate.getTime() - now.getTime();
+    const diff = millisecondsUntilNextHour();
     const minutes = Math.floor(diff / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
     return `${minutes}m ${seconds}s`;

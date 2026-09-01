@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 27,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:35:26.134Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And those who are mindful and diligent to observe the grace that has been given, let them pray according to the law in the book of the law; for my God Christ is my teacher, and I declare to you, O my son Clement, that prayer is effective at the first hour of evening, and at the third hour, and at the sixth hour, and at the ninth hour, and at evening, and at the time of sleep, and at the time of the breath of night."
+  }
+}

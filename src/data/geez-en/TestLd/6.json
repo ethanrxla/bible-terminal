@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 6,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:15:46.493Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter 6: Of the Antichrist"
+  }
+}

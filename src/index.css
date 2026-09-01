@@ -46,6 +46,11 @@
 }
 
 @layer components {
+  .font-geez {
+    font-family: 'Noto Sans Ethiopic', 'Abyssinica SIL', serif;
+    line-height: 2;
+  }
+
   .font-terminal {
     font-family: 'Courier Prime', monospace;
   }

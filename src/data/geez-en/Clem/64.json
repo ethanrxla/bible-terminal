@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 64,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T23:41:26.470Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And the priest prophesied the supplication of the psalm of David, and in the night the praise of the prophets, because they are established in this time: the zeal of his sword is the sword."
+  }
+}

@@ -1,39 +1,58 @@
-import React, { useEffect, useState } from 'react';
-import { Book, Scroll, BookText, Sun, Moon, Sparkles, Search as SearchIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Book, Sun, Moon, Sparkles, Library, Search as SearchIcon } from 'lucide-react';
 import Terminal from './components/Terminal';
-import BibleVerse from './components/BibleVerse';
-import BiblePassage from './components/BiblePassage';
+import HourlySection from './components/HourlySection';
 import TranslationSelector from './components/TranslationSelector';
 import SearchBar from './components/SearchBar';
 import SearchResults from './components/SearchResults';
 import MultiTranslationVerse from './components/MultiTranslationVerse';
-import { useBible } from './hooks/useBible';
+import CanonBrowser, { type CanonTarget } from './components/CanonBrowser';
+import { useBible, BibleContent } from './hooks/useBible';
 import { useTheme } from './hooks/useTheme';
+import { useEdition } from './hooks/useEdition';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useFontSize } from './hooks/useFontSize';
 import TimeDisplay from './components/TimeDisplay';
 import FontSizeControl from './components/FontSizeControl';
+import { millisecondsUntilNextHour } from './services/hourly';
 
 function App() {
   const { 
     dailyVerse, 
-    dailyPassage, 
+    dailyPassage,
+    ethiopianVerse,
     fetchData, 
     isLoading,
+    hourlyError,
     searchResults,
     isSearching,
     searchQuery,
-    selectedTranslations,
     searchBible,
     getVerseInTranslations,
     clearSearch,
-    setSelectedTranslations,
-    availableTranslations
   } = useBible();
   const { theme, toggleTheme } = useTheme();
+  const { editionId, changeEdition } = useEdition();
+
+  // The edition applies to the canon browser only. The three hourly slots are
+  // generated once per hour on the server and shared by every reader, so they
+  // cannot follow a per-visitor translation preference without ceasing to be
+  // shared -- which is the whole point of them.
+  const handleEditionChange = (id: string) => {
+    changeEdition(id);
+  };
   const { fontSize, increaseFontSize, decreaseFontSize } = useFontSize();
   const [showSearch, setShowSearch] = useState(false);
-  const [multiTranslationVerse, setMultiTranslationVerse] = useState<any[]>([]);
+  const [showCanon, setShowCanon] = useState(false);
+  const [canonTarget, setCanonTarget] = useState<CanonTarget | null>(null);
+
+  // A cited reference opens the canon browser at that book and chapter.
+  const handleNavigateToReference = (bookId: string, chapter: number) => {
+    setCanonTarget({ bookId, chapter });
+    setShowCanon(true);
+    setShowSearch(false);
+  };
+  const [multiTranslationVerse, setMultiTranslationVerse] = useState<BibleContent[]>([]);
 
   const handleSearch = (query: string) => {
     setShowSearch(true);
@@ -55,46 +74,26 @@ function App() {
   useEffect(() => {
     fetchData();
 
-    // Set up a timer to refresh data every hour
-    const now = new Date();
-    const nextHour = new Date(now);
-    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-    const timeUntilNextHour = nextHour.getTime() - now.getTime();
+    // Align the first refresh with the top of the hour, then repeat hourly.
+    // Both handles are owned by the effect so cleanup can clear each one --
+    // returning the interval cleanup from inside the timeout callback (as this
+    // did previously) leaks an interval on every remount.
+    let hourlyInterval: ReturnType<typeof setInterval> | undefined;
 
-    // Initial fetch and then refresh every hour
     const timer = setTimeout(() => {
       fetchData();
-      // After the first hour, set up hourly interval
-      const hourlyInterval = setInterval(fetchData, 60 * 60 * 1000); // 1 hour
-      return () => clearInterval(hourlyInterval);
-    }, timeUntilNextHour);
+      hourlyInterval = setInterval(fetchData, 60 * 60 * 1000);
+    }, millisecondsUntilNextHour());
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (hourlyInterval) clearInterval(hourlyInterval);
+    };
   }, [fetchData]);
 
   const handleVerseClick = async (reference: string) => {
     const verses = await getVerseInTranslations(reference);
     setMultiTranslationVerse(verses);
-  };
-
-  const getSectionIcon = (type?: string) => {
-    switch (type) {
-      case 'story':
-        return <BookText className="h-5 w-5 text-amber-400" />;
-      case 'passage':
-        return <Scroll className="h-5 w-5 text-amber-400" />;
-      default:
-        return <Scroll className="h-5 w-5 text-amber-400" />;
-    }
-  };
-
-  const getSectionTitle = (content: any) => {
-    if (content?.type === 'story') {
-      return 'Hourly Story';
-    } else if (content?.type === 'passage') {
-      return 'Hourly Passage';
-    }
-    return 'Hourly Verse';
   };
 
   return (
@@ -119,9 +118,8 @@ function App() {
           </div>
           <div className="flex items-center gap-3">
             <TranslationSelector
-              selectedTranslations={selectedTranslations}
-              onTranslationsChange={setSelectedTranslations}
-              maxSelections={3}
+              editionId={editionId}
+              onEditionChange={handleEditionChange}
             />
             <FontSizeControl
               fontSize={fontSize}
@@ -129,7 +127,21 @@ function App() {
               onDecrease={decreaseFontSize}
             />
             <button
-              onClick={() => setShowSearch(!showSearch)}
+              onClick={() => { setShowCanon((v) => !v); setShowSearch(false); }}
+              className={`p-2 rounded-full transition-colors ${
+                showCanon
+                  ? 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'
+                  : theme === 'dark'
+                    ? 'bg-slate-800 text-amber-400 hover:bg-slate-700'
+                    : 'bg-amber-100 text-slate-700 hover:bg-amber-200'
+              }`}
+              aria-label="Browse the Ethiopian canon"
+              title="Browse the Ethiopian canon"
+            >
+              <Library size={20} />
+            </button>
+            <button
+              onClick={() => { setShowSearch(!showSearch); setShowCanon(false); }}
               className={`p-2 rounded-full transition-colors ${
                 showSearch
                   ? 'bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200'
@@ -168,8 +180,18 @@ function App() {
           </div>
         )}
 
-        <Terminal isLoading={isLoading}>
-          {showSearch && searchQuery ? (
+        <Terminal
+          isLoading={
+            isLoading &&
+            !showCanon &&
+            !dailyVerse &&
+            !dailyPassage &&
+            !ethiopianVerse
+          }
+        >
+          {showCanon ? (
+            <CanonBrowser target={canonTarget} />
+          ) : showSearch && searchQuery ? (
             <div className="space-y-8 py-4">
               {/* Multi-translation verse display */}
               {multiTranslationVerse.length > 0 && (
@@ -188,48 +210,40 @@ function App() {
               />
             </div>
           ) : (
-            <div className="space-y-10 py-4">
-              {/* Regular hourly content */}
-            {dailyVerse && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                  {getSectionIcon(dailyVerse.type)}
-                  <h2 className="font-terminal text-xl font-bold">
-                    {getSectionTitle(dailyVerse)}
-                  </h2>
-                  {dailyVerse.type === 'story' && (
-                    <span className="text-xs font-terminal bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                      BIBLICAL STORY
-                    </span>
-                  )}
-                  <span className="text-xs font-terminal bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
-                    UPDATES HOURLY
-                  </span>
+            <div className="space-y-12 py-4">
+              {hourlyError && !dailyVerse && !dailyPassage && !ethiopianVerse && (
+                <div className="rounded-md border border-red-300 bg-red-50 p-5 text-red-700 dark:border-red-700/40 dark:bg-red-900/20 dark:text-red-300">
+                  <p className="font-terminal text-sm">{hourlyError}</p>
                 </div>
-                <BibleVerse verse={dailyVerse} />
-              </div>
-            )}
+              )}
+              {dailyVerse && (
+                <HourlySection
+                  title="Hourly Verse"
+                  content={dailyVerse}
+                  variant="verse"
+                  onNavigate={handleNavigateToReference}
+                />
+              )}
 
-            {dailyPassage && (
-              <div className="space-y-6 mt-10">
-                <div className="flex items-center gap-2">
-                  {getSectionIcon(dailyPassage.type)}
-                  <h2 className="font-terminal text-xl font-bold">
-                    {getSectionTitle(dailyPassage)}
-                  </h2>
-                  {dailyPassage.type === 'story' && (
-                    <span className="text-xs font-terminal bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                      BIBLICAL STORY
-                    </span>
-                  )}
-                  <span className="text-xs font-terminal bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
-                    UPDATES HOURLY
-                  </span>
-                </div>
-                <BiblePassage passage={dailyPassage} />
-              </div>
-            )}
-          </div>
+              {dailyPassage && (
+                <HourlySection
+                  title="Hourly Passage"
+                  content={dailyPassage}
+                  variant="passage"
+                  onNavigate={handleNavigateToReference}
+                />
+              )}
+
+              {ethiopianVerse && (
+                <HourlySection
+                  title="From the Ethiopian Canon"
+                  content={ethiopianVerse}
+                  variant="verse"
+                  badge="ETHIOPIAN CANON"
+                  onNavigate={handleNavigateToReference}
+                />
+              )}
+            </div>
           )}
         </Terminal>
       </div>

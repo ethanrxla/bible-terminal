@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 6,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:59:26.046Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And he gave and he appointed in the priesthood Heli and his sons for the priesthood; and he commanded by the gift, saying: I, Peter, at the time appointed for you, ordain Simon to be chief; and let his ordination be like the ascent of Judah, and his soul far from the presence of God, like the Devil who opposed Him."
+  }
+}

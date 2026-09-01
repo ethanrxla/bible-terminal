@@ -1,6 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  // useTheme toggles a `dark` class on <html>. Without this, Tailwind v3
+  // defaults to `media`, so every `dark:` variant follows the OS setting and
+  // ignores the in-app toggle -- which made the page shell go dark while every
+  // card and panel inside it stayed light.
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {

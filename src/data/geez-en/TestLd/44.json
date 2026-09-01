@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 44,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:37:23.596Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter Forty-Four: Concerning the Manner in Which They Ought to Be Admitted to Holy Baptism"
+  }
+}

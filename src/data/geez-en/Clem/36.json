@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 36,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:57:00.752Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And they remembered their death in holiness at all times, for they shall be judged in judgment, and shall draw near before the Lord Christ."
+  }
+}

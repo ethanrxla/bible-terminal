@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 5,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:54:03.033Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And he gave his Son the wealth of the priesthood and the grace of the Holy Spirit in giving; and he bestowed it upon the priesthood, and he raised up for her the hand from of old, blessed; and from his righteousness which he received in the body as a blessing."
+  }
+}

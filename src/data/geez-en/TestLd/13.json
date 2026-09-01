@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 13,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:19:13.358Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And it is fitting that a bishop be diligent in the sacrifice and in prayer."
+  }
+}

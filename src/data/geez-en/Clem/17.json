@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 17,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:16:16.658Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Do for Nadab from the uttermost part of your congregation, and live, and believe, and take heed, that the adversary of your affliction may become as when you are afflicted and seek healing, even as God heals you. And He shall make it known through your measure and your likeness, and at the hour when you are so afflicted, and you shall remember; because Nebuchadnezzar the king remembered, and repented, and was healed by the hand of God."
+  }
+}

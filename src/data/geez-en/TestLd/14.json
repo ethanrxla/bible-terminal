@@ -1,0 +1,11 @@
+{
+  "book": "TestLd",
+  "label": "Testament of Our Lord",
+  "chapter": 14,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T21:22:33.640Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "Chapter Fourteen: That He Should Teach in the Church."
+  }
+}

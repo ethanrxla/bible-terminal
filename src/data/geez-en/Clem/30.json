@@ -1,0 +1,11 @@
+{
+  "book": "Clem",
+  "label": "Ethiopic Clement",
+  "chapter": 30,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "generatedAt": "2026-08-31T22:41:29.942Z",
+  "verseCount": 1,
+  "verses": {
+    "1": "And those Jews and believers who devour their fasts and their prayers, and who observe their faith. And whosoever believes in their faith and perseveres, he shall arise like the fourth day of the Christian church, four days, and he shall devour that which he eats, the bread, and he shall eat therein."
+  }
+}

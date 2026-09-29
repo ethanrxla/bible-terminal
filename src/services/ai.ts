@@ -1,5 +1,5 @@
-import OpenAI from 'openai';
 import type { CanonSection } from '../types/canon';
+import { streamCompletion, type ChatMessage } from './sse';
 import {
   aiRequestQueue,
   withRateLimitRetry,
@@ -13,22 +13,6 @@ import {
   markUnavailable,
   type ModelProfile,
 } from './models';
-
-/**
- * All AI traffic goes to NVIDIA's OpenAI-compatible endpoint through our own
- * proxy. The SDK builds request URLs with `new URL(...)`, which rejects a bare
- * path, so the origin has to be spelled out even though this is same-origin.
- */
-const PROXY_BASE_URL = `${globalThis.location?.origin ?? 'http://localhost:5173'}/api/nvidia`;
-
-const client = new OpenAI({
-  baseURL: PROXY_BASE_URL,
-  apiKey: 'proxied-server-side',
-  dangerouslyAllowBrowser: true,
-  // Retries live in ./rateLimit so the UI can show a "retrying" state rather
-  // than sitting silent inside the SDK.
-  maxRetries: 0,
-});
 
 /**
  * Reasoning models spend thinking tokens from the same `max_tokens` budget as
@@ -48,84 +32,6 @@ export interface AiCallOptions {
 export interface AiResult {
   text: string;
   model: ModelProfile;
-}
-
-type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
-
-// --- interpretations ---------------------------------------------------------
-
-export type InterpretationType = 'verse' | 'passage' | 'story';
-
-export interface InterpretationRequest {
-  text: string;
-  reference: string;
-  type: InterpretationType;
-  /** Where the book sits in the EOTC canon; steers the reading tradition. */
-  canon?: CanonSection;
-  /** Ge'ez title, when we have one, so the model can name the book properly. */
-  geezName?: string;
-  /**
-   * Surrounding verses. Supplying these is what lets the model describe what is
-   * happening around the passage instead of guessing from the reference alone.
-   */
-  context?: { before: string; after: string; chapterReference: string };
-}
-
-function canonGuidance(canon: CanonSection | undefined, geezName?: string): string {
-  const geez = geezName ? ` Its Ge’ez title is ${geezName}.` : '';
-
-  if (canon === 'ethiopian') {
-    return (
-      ` This passage is from a book canonical in the Ethiopian Orthodox Tewahedo Church ` +
-      `and not found in the Protestant or Catholic canons.${geez} Interpret it from within ` +
-      `the Ethiopian Orthodox Tewahedo tradition, noting briefly why it is received there.`
-    );
-  }
-  if (canon === 'deuterocanonical') {
-    return (
-      ` This passage is deuterocanonical: received as scripture by the Ethiopian Orthodox ` +
-      `Tewahedo, Catholic, and Eastern Orthodox churches, though not in the Protestant canon.${geez}`
-    );
-  }
-  return geez;
-}
-
-/**
- * Kept deliberately identical to `interpretationMessages` in api/hourly.ts.
- * Both paths exist -- the server one for a shared hourly answer where the plan
- * allows a long enough function, this one for streaming in the browser -- and
- * they must not drift into producing differently-shaped interpretations.
- */
-function interpretationMessages(request: InterpretationRequest): ChatMessage[] {
-  const system = `You are a biblical scholar and historian writing for a reader of the Ethiopian Orthodox Tewahedo Bible. You know the historical setting of each book, the literary shape of its argument, and the tradition that received it.${canonGuidance(request.canon, request.geezName)}
-
-Write three short paragraphs, with no headings and no bullet points. First, place the passage in its historical setting, naming the period, place, audience, and relevant political or religious pressure where known. Second, explain what happens in the supplied surrounding verses and how the passage connects to them, including an original-language detail or custom only when it materially helps. Third, draw out its meaning for a reader today, grounded in that setting. Be specific; do not write generic encouragement or merely restate the verse. State uncertainty rather than inventing detail.`;
-
-  let user = `Interpret this Bible ${request.type} from ${request.reference}:\n\n"${request.text}"`;
-  const context = request.context;
-  if (context && (context.before || context.after)) {
-    user += `\n\nSurrounding text from ${context.chapterReference}:`;
-    if (context.before) user += `\n\nImmediately before:\n"${context.before}"`;
-    if (context.after) user += `\n\nImmediately after:\n"${context.after}"`;
-    user += '\n\nUse this context, but interpret only the selected passage.';
-  }
-
-  return [
-    { role: 'system', content: system },
-    { role: 'user', content: user },
-  ];
-}
-
-export async function generateInterpretationStream(
-  request: InterpretationRequest,
-  onToken: (delta: string) => void,
-  options: AiCallOptions = {},
-): Promise<AiResult> {
-  return streamChat(interpretationMessages(request), onToken, {
-    ...options,
-    temperature: 0.7,
-    maxTokens: 2048,
-  });
 }
 
 // --- scripture-grounded question answering -----------------------------------
@@ -206,28 +112,19 @@ async function streamChat(
               ...rest,
             ];
 
-            const stream = await client.chat.completions.create(
+            onModel?.(model);
+
+            const full = await streamCompletion(
               {
                 model: model.id,
                 messages: withPrefix,
                 max_tokens: maxTokens,
                 temperature,
-                stream: true,
-                ...model.params,
+                signal,
+                params: model.params,
               },
-              { signal },
+              onToken,
             );
-
-            onModel?.(model);
-
-            let full = '';
-            for await (const chunk of stream) {
-              const delta = chunk.choices[0]?.delta?.content;
-              if (delta) {
-                full += delta;
-                onToken(delta);
-              }
-            }
 
             markHealthy(model.id);
             return { text: full.trim(), model };

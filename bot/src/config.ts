@@ -6,6 +6,9 @@
  * checked at startup and a missing value stops the process immediately.
  */
 
+export const PARTS = ['scripture', 'interpretation', 'question'] as const;
+export type SendPart = (typeof PARTS)[number];
+
 function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -41,12 +44,33 @@ export const config = {
   timezone: optional('TZ_NAME', 'America/New_York'),
 
   /**
+   * One day a week gets the full passage; the rest get a single verse. A
+   * passage every morning is more than a group will read, and a verse every
+   * morning never gives anyone something to sit with.
+   * 0 = Sunday. Set to -1 for a verse every day.
+   */
+  weeklyPassageDay: Number(optional('WEEKLY_PASSAGE_DAY', '0')),
+  /** What the other six days send. */
+  dailySlot: optional('DAILY_SLOT', 'verse') as 'verse' | 'passage' | 'ethiopian',
+
+  /**
    * On boot, send a reading that was missed while the process was down --
    * but only this many hours past the scheduled time. Without a bound, a
    * droplet that was off for a week would wake up and post a stale passage at
    * whatever hour it happened to come back.
    */
   catchUpHours: Number(optional('CATCH_UP_HOURS', '6')),
+
+  /**
+   * Which parts of the reading to send, in order. The interpretation is three
+   * paragraphs and runs past 2000 characters, which is a lot to land in a
+   * group chat every morning -- it is always on the site, so leaving it out
+   * here is a reasonable default rather than a loss.
+   */
+  sendParts: (process.env.SEND_PARTS ?? 'scripture,question')
+    .split(',')
+    .map((part) => part.trim().toLowerCase())
+    .filter((part): part is SendPart => PARTS.includes(part as SendPart)),
 
   /** Print the messages instead of sending them. */
   dryRun: process.env.DRY_RUN === '1',

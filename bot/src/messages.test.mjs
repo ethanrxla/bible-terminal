@@ -38,6 +38,7 @@ test('a single over-long paragraph falls back to sentence ends', () => {
 
 const base = {
   ready: true,
+  slot: 'passage',
   day: '2026-09-29',
   reference: 'Isaiah 47:5-10',
   text: 'Sit thou silent.',
@@ -75,4 +76,29 @@ test('a long interpretation splits rather than being truncated', () => {
 test('every message fits WhatsApp when the passage is at its longest', () => {
   const messages = messagesFor({ ...base, text: 'verse text. '.repeat(300) });
   for (const message of messages) assert.ok(Buffer.byteLength(message, 'utf8') < 4096);
+});
+
+test('SEND_PARTS: scripture only still carries the link through', () => {
+  const messages = messagesFor(base, ['scripture']);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /Isaiah 47:5-10/);
+  assert.ok(!/Interpretation/.test(messages[0]));
+  assert.match(messages[0], /bible-terminal\.vercel\.app/, 'the site link must survive');
+});
+
+test('SEND_PARTS: scripture + question omits the long interpretation', () => {
+  const messages = messagesFor(base, ['scripture', 'question']);
+  assert.equal(messages.length, 2);
+  assert.ok(!messages.some((m) => /Interpretation/.test(m)));
+  assert.match(messages[1], /For reflection/);
+});
+
+test('SEND_PARTS: order is fixed, not caller-controlled', () => {
+  const messages = messagesFor(base, ['question', 'scripture']);
+  assert.match(messages[0], /Isaiah/, 'passage always leads');
+  assert.match(messages[1], /For reflection/);
+});
+
+test('SEND_PARTS: an empty selection sends nothing', () => {
+  assert.deepEqual(messagesFor(base, []), []);
 });

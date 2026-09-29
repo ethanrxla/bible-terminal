@@ -40,6 +40,17 @@ function previousDayKey(key: string): string {
   return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
 }
 
+function hourKey(date = new Date()): string {
+  return date.toISOString().slice(0, 13);
+}
+
+type Slot = 'verse' | 'passage' | 'ethiopian';
+
+/** Mirrors CADENCE in api/hourly.ts. */
+function editionKeyFor(slot: Slot): string {
+  return slot === 'passage' ? dayKey() : hourKey();
+}
+
 function originFor(request: Request): string {
   // VERCEL_URL is the deployment host and has no protocol.
   const fromEnv = process.env.VERCEL_URL;
@@ -76,31 +87,47 @@ export async function GET(request: Request): Promise<Response> {
     return json({ error: 'Unauthorized' }, 401);
   }
 
+  // Defaults to the daily passage; the hourly slots are available so a
+  // one-off send can pull a short verse instead of the day's full reading.
+  const url = new URL(request.url, 'http://localhost');
+  const slot = (url.searchParams.get('slot') ?? 'passage') as Slot;
+  if (!['verse', 'passage', 'ethiopian'].includes(slot)) {
+    return json({ error: 'Unknown slot' }, 400);
+  }
+
+  // Two different things, deliberately separated. `editionKey` addresses the
+  // edition on the server (an hour key for the hourly slots). `day` is the
+  // reading day, always the 6am-Eastern date, and is what a caller should use
+  // to decide whether it has already sent today -- an hour key would let the
+  // same day go out twice from different hours.
+  const editionKey = editionKeyFor(slot);
   const day = dayKey();
 
   let edition: Edition;
   try {
-    const upstream = await fetch(`${originFor(request)}/api/hourly?key=${day}&slot=passage`, {
+    const upstream = await fetch(`${originFor(request)}/api/hourly?key=${editionKey}&slot=${slot}`, {
       signal: AbortSignal.timeout(58_000),
     });
     edition = (await upstream.json()) as Edition;
-    if (!upstream.ok) return json({ error: 'Passage unavailable', day, ready: false }, 503);
+    if (!upstream.ok) return json({ error: 'Reading unavailable', day, editionKey, ready: false }, 503);
   } catch (error) {
-    return json({ error: (error as Error).message, day, ready: false }, 503);
+    return json({ error: (error as Error).message, day, editionKey, ready: false }, 503);
   }
 
   // Never hand the bot half an edition. A 503 tells it to back off and retry,
   // and its request has already started the generation it is waiting for.
   if (!edition.content?.text) {
-    return json({ error: 'Passage unavailable', day, ready: false }, 503);
+    return json({ error: 'Reading unavailable', day, editionKey, ready: false }, 503);
   }
   if (!edition.interpretation?.text) {
-    return json({ error: 'Interpretation not ready', day, ready: false }, 503);
+    return json({ error: 'Interpretation not ready', day, editionKey, ready: false }, 503);
   }
 
   return json({
     ready: true,
-    day, // the bot's idempotency key
+    slot,
+    day, // the reading day -- the bot's idempotency key
+    editionKey, // which server edition this text came from
     reference: edition.content.reference ?? '',
     text: edition.content.text,
     translation: edition.content.translation_name ?? '',

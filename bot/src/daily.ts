@@ -20,21 +20,24 @@ interface FetchOptions {
  * starts it. So the backoff is generous: the first attempt kicks the
  * generation off and a later one collects it.
  */
-export async function fetchDaily(options: FetchOptions = {}): Promise<DailyPayload> {
+export async function fetchDaily(
+  slot: DailyPayload['slot'] = 'passage',
+  options: FetchOptions = {},
+): Promise<DailyPayload> {
   const attempts = options.attempts ?? 5;
   const waits = [30_000, 60_000, 120_000, 240_000];
   let lastReason = 'no attempt made';
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      const response = await fetch(`${config.apiBase}/api/daily`, {
+      const response = await fetch(`${config.apiBase}/api/daily?slot=${slot}`, {
         signal: AbortSignal.timeout(120_000),
         headers: config.botToken ? { Authorization: `Bearer ${config.botToken}` } : {},
       });
       const body = (await response.json()) as Partial<DailyPayload> & { error?: string };
 
       if (response.ok && body.ready && body.text && body.interpretation) {
-        return body as DailyPayload;
+        return { ...body, slot: body.slot ?? slot } as DailyPayload;
       }
       lastReason = body.error ?? `HTTP ${response.status}`;
     } catch (error) {

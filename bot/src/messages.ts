@@ -6,8 +6,11 @@
  * phone, a network, or a set of environment variables.
  */
 
+export type SendPart = 'scripture' | 'interpretation' | 'question';
+
 export interface DailyPayload {
   ready: true;
+  slot: 'verse' | 'passage' | 'ethiopian';
   day: string;
   reference: string;
   text: string;
@@ -66,17 +69,32 @@ export function chunkOnParagraphs(text: string, limit = CHUNK_LIMIT): string[] {
  * than one rather than being truncated, and the question is dropped entirely
  * rather than invented when the model did not produce one.
  */
-export function messagesFor(payload: DailyPayload): string[] {
+export function messagesFor(
+  payload: DailyPayload,
+  parts: readonly SendPart[] = ['scripture', 'interpretation', 'question'],
+): string[] {
   const heading = payload.geezName
     ? `*${payload.reference}*  ·  ${payload.geezName}`
     : `*${payload.reference}*`;
 
-  const messages = [`📖 ${heading}\n_${payload.translation}_\n\n${payload.text}`];
+  const messages: string[] = [];
 
-  messages.push(...chunkOnParagraphs(`🕮 *Interpretation*\n\n${payload.interpretation}`));
+  if (parts.includes('scripture')) {
+    messages.push(`📖 ${heading}\n_${payload.translation}_\n\n${payload.text}`);
+  }
 
-  if (payload.question) {
+  if (parts.includes('interpretation')) {
+    messages.push(...chunkOnParagraphs(`🕮 *Interpretation*\n\n${payload.interpretation}`));
+  }
+
+  if (parts.includes('question') && payload.question) {
+    // The link goes on the last message whatever it is, so there is always
+    // one way through to the full interpretation on the site.
     messages.push(`💬 *For reflection*\n\n${payload.question}\n\n${payload.url}`);
+  }
+
+  if (messages.length > 0 && !parts.includes('question')) {
+    messages[messages.length - 1] += `\n\n${payload.url}`;
   }
 
   return messages;

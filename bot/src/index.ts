@@ -11,6 +11,7 @@ import { config } from './config.js';
 import { fetchDaily } from './daily.js';
 import { messagesFor } from './messages.js';
 import { acquireLock, SendLog } from './state.js';
+import { takeRequest, type SendRequest } from './request.js';
 import { connect } from './whatsapp.js';
 
 const log = (message: string) => console.log(`[${new Date().toISOString()}] ${message}`);
@@ -47,10 +48,30 @@ function hourIn(timezone: string, date = new Date()): number {
   );
 }
 
-async function run(trigger: string): Promise<void> {
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Day of week in the configured zone, 0 = Sunday. */
+function weekdayIn(timezone: string, date = new Date()): number {
+  const name = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' }).format(date);
+  return WEEKDAYS.indexOf(name);
+}
+
+/**
+ * The passage one day a week, a single verse the rest. Reading a full passage
+ * every morning is more than a group sustains; a verse every morning never
+ * gives anyone something to sit with.
+ */
+function slotForToday(): 'verse' | 'passage' | 'ethiopian' {
+  return weekdayIn(config.timezone) === config.weeklyPassageDay ? 'passage' : config.dailySlot;
+}
+
+async function run(trigger: string, request?: SendRequest): Promise<void> {
   log(`Run triggered by ${trigger}.`);
 
-  const payload = await fetchDaily({
+  const slot = request?.slot ?? slotForToday();
+  const parts = request?.parts ?? config.sendParts;
+
+  const payload = await fetchDaily(slot, {
     onRetry: (attempt, wait, reason) =>
       log(`Attempt ${attempt} not ready (${reason}); retrying in ${wait / 1000}s.`),
   });
@@ -58,14 +79,27 @@ async function run(trigger: string): Promise<void> {
   // Checked after the fetch, because the server owns the definition of "which
   // day it is" -- deriving it here would mean a second copy of the 6am
   // boundary and its DST handling.
-  const { lastSentDay } = await sendLog.read();
-  if (lastSentDay === payload.day) {
-    log(`${payload.day} has already been sent; nothing to do.`);
-    return;
+  //
+  // Guarded on payload.day, the reading day, never on the edition key: the
+  // hourly slots change key every hour, so keying on that would let the same
+  // morning go out again from the next hour.
+  //
+  // A one-off request is exempt -- asking for a send is the point of it.
+  const guarded = !request;
+  if (guarded) {
+    const { lastSentDay } = await sendLog.read();
+    if (lastSentDay === payload.day) {
+      log(`${payload.day} has already been sent; nothing to do.`);
+      return;
+    }
   }
 
-  const messages = messagesFor(payload);
-  log(`${payload.day}: ${payload.reference} (${messages.length} messages).`);
+  const messages = messagesFor(payload, parts);
+  if (messages.length === 0) {
+    log(`SEND_PARTS selected nothing to send (${parts.join(',') || 'empty'}).`);
+    return;
+  }
+  log(`${payload.day} ${slot}: ${payload.reference} (${messages.length} messages, parts: ${parts.join('+')}).`);
 
   if (config.dryRun) {
     messages.forEach((message, index) => {
@@ -87,18 +121,29 @@ async function run(trigger: string): Promise<void> {
   // Only after every message landed. A crash midway re-sends the whole day on
   // the next run -- a rare duplicate is easier to live with than a passage
   // whose interpretation never arrived.
-  await sendLog.markSent(payload.day);
-  log(`Sent ${payload.day}.`);
+  if (guarded) await sendLog.markSent(payload.day);
+  log(`Sent ${payload.day} (${slot}).`);
 }
 
-function guarded(trigger: string): void {
-  run(trigger).catch((error: Error) => log(`Run failed: ${error.message}`));
+function fire(trigger: string, request?: SendRequest): void {
+  run(trigger, request).catch((error: Error) => log(`Run failed: ${error.message}`));
 }
+
+// A scheduled one-off cannot start a second process (the lock refuses it) and
+// a signal cannot carry a slot, so requests arrive as a small file.
+setInterval(() => {
+  void takeRequest(config.dataDir).then((request) => {
+    if (request) fire(`request file (${request.slot})`, request);
+  });
+}, 15_000);
 
 if (!config.dryRun) whatsapp();
 
-cron.schedule(config.sendAt, () => guarded('schedule'), { timezone: config.timezone });
+cron.schedule(config.sendAt, () => fire('schedule'), { timezone: config.timezone });
+const weeklyName = WEEKDAYS[config.weeklyPassageDay] ?? 'never';
 log(`Scheduled "${config.sendAt}" (${config.timezone}). Posting to ${config.groupJid}.`);
+log(`${weeklyName}: passage. Other days: ${config.dailySlot}. Parts: ${config.sendParts.join('+')}.`);
+log(`Today is ${WEEKDAYS[weekdayIn(config.timezone)]} -> ${slotForToday()}.`);
 
 // Catch up on a send missed while the process was down, but only shortly
 // after the fact -- see CATCH_UP_HOURS. Outside that window a restart must be
@@ -108,7 +153,7 @@ const nowHour = hourIn(config.timezone);
 if (Number.isFinite(scheduledHour) && nowHour >= scheduledHour && nowHour < scheduledHour + config.catchUpHours) {
   const { lastSentDay } = await sendLog.read();
   log(`Inside the catch-up window (last sent: ${lastSentDay ?? 'never'}).`);
-  guarded('catch-up');
+  fire('catch-up');
 } else {
   log('Outside the catch-up window; waiting for the schedule.');
 }

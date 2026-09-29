@@ -10,10 +10,26 @@ import cron from 'node-cron';
 import { config } from './config.js';
 import { fetchDaily } from './daily.js';
 import { messagesFor } from './messages.js';
-import { SendLog } from './state.js';
+import { acquireLock, SendLog } from './state.js';
 import { connect } from './whatsapp.js';
 
 const log = (message: string) => console.log(`[${new Date().toISOString()}] ${message}`);
+
+// Before anything else. Two bots would mean two schedules, two sends of the
+// same reading, and two Baileys sockets writing one auth directory.
+let releaseLock: () => Promise<void>;
+try {
+  releaseLock = await acquireLock(config.dataDir);
+} catch (error) {
+  log((error as Error).message);
+  process.exit(1);
+}
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.once(signal, () => {
+    void releaseLock().finally(() => process.exit(0));
+  });
+}
 
 const sendLog = new SendLog(config.dataDir);
 

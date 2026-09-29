@@ -25,8 +25,13 @@ export const config = {
   botToken: process.env.BOT_TOKEN?.trim() || '',
   /** The group to post into, e.g. "1203...@g.us". Found with `npm run groups`. */
   groupJid: required('WHATSAPP_GROUP_JID'),
-  /** Digits only, country code included, for pairing-code login. */
+  /**
+   * Digits only, country code included. Punctuation is stripped, so
+   * "+1 (555) 123-4567" is accepted as written.
+   */
   phoneNumber: (process.env.WHATSAPP_NUMBER ?? '').replace(/\D/g, ''),
+  /** 'qr' forces the QR path, which is renewable where a code is not. */
+  pairMode: (process.env.PAIR_MODE ?? '').trim().toLowerCase(),
 
   authDir: optional('AUTH_DIR', './auth'),
   dataDir: optional('DATA_DIR', './data'),

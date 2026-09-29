@@ -65,21 +65,39 @@ export function connect(onLog: (message: string) => void): Connection {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr && !state.creds.registered) {
-        // A pairing code is far easier than scanning a QR over SSH, but it
-        // needs the number up front; fall back to the QR when it is absent.
-        if (config.phoneNumber && !pairingRequested) {
-          pairingRequested = true;
+        // A QR is refreshed every ~20s and can simply be re-scanned, so it is
+        // the more forgiving of the two. A pairing code expires and cannot be
+        // renewed without restarting, which is why PAIR_MODE can force QR.
+        if (config.pairMode === 'qr' || !config.phoneNumber) {
+          onLog('Scan this QR in WhatsApp > Settings > Linked devices (it refreshes automatically):');
+          qrcode.generate(qr, { small: true });
+          return;
+        }
+
+        if (pairingRequested) return;
+        pairingRequested = true;
+
+        // Requested a beat after the socket settles: asking immediately on
+        // the first qr event is what tends to produce a code the server then
+        // rejects, ending in 408 and a poisoned auth directory.
+        setTimeout(() => {
           void socket
             ?.requestPairingCode(config.phoneNumber)
-            .then((code) => onLog(`Pairing code: ${code}  (WhatsApp > Linked devices > Link with phone number)`))
+            .then((code) => {
+              onLog('');
+              onLog(`    PAIRING CODE:  ${code}`);
+              onLog('');
+              onLog('    On the phone: WhatsApp > Settings > Linked devices');
+              onLog('                  > Link with phone number > enter the code.');
+              onLog('    It expires in about a minute -- have that screen open first.');
+              onLog('    If it fails: run `bible-bot-reset`, then pair again.');
+              onLog('');
+            })
             .catch((error: Error) => {
-              onLog(`Pairing code failed (${error.message}); falling back to QR.`);
+              onLog(`Pairing code failed (${error.message}); showing a QR instead.`);
               qrcode.generate(qr, { small: true });
             });
-        } else if (!config.phoneNumber) {
-          onLog('Scan this QR in WhatsApp > Linked devices:');
-          qrcode.generate(qr, { small: true });
-        }
+        }, 3000);
       }
 
       if (connection === 'open') {

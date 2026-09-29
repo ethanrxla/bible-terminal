@@ -239,24 +239,21 @@ function App() {
                   <p className="font-terminal text-sm">{hourlyError}</p>
                 </div>
               )}
-              {/* The daily passage leads: it is the reading the family
-                  studies together and the one sent to the group each
-                  morning, so it should not sit below two faster sections. */}
+              {dailyVerse && (
+                <HourlySection
+                  title="Hourly Verse"
+                  content={dailyVerse}
+                  variant="verse"
+                  onNavigate={handleNavigateToReference}
+                />
+              )}
+
               {dailyPassage && (
                 <HourlySection
                   title="Daily Passage"
                   content={dailyPassage}
                   variant="passage"
                   cadence="daily"
-                  onNavigate={handleNavigateToReference}
-                />
-              )}
-
-              {dailyVerse && (
-                <HourlySection
-                  title="Hourly Verse"
-                  content={dailyVerse}
-                  variant="verse"
                   onNavigate={handleNavigateToReference}
                 />
               )}

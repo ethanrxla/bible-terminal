@@ -12,6 +12,8 @@ import { fetchDaily } from './daily.js';
 import { messagesFor } from './messages.js';
 import { acquireLock, SendLog } from './state.js';
 import { takeRequest, type SendRequest } from './request.js';
+import { createListener } from './listen.js';
+import type { ReadingContext } from './converse.js';
 import { connect } from './whatsapp.js';
 
 const log = (message: string) => console.log(`[${new Date().toISOString()}] ${message}`);
@@ -34,10 +36,27 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 
 const sendLog = new SendLog(config.dataDir);
 
+/**
+ * The day's reading, for answering questions about it. Cached per reading day
+ * so a busy conversation does not refetch it on every message.
+ */
+let readingCache: { day: string; value: ReadingContext } | null = null;
+async function currentReading(): Promise<ReadingContext | null> {
+  const payload = await fetchDaily(slotForToday(), { attempts: 1 });
+  if (readingCache?.day !== payload.day) {
+    readingCache = { day: payload.day, value: { reference: payload.reference, text: payload.text } };
+  }
+  return readingCache.value;
+}
+
+const listener = config.conversation
+  ? createListener({ groupJid: config.groupJid, reading: currentReading, log })
+  : null;
+
 // Connected lazily so a dry run -- and `npm run groups` -- does not need a
 // paired session just to print what the morning message would say.
 let connection: ReturnType<typeof connect> | null = null;
-const whatsapp = () => (connection ??= connect(log));
+const whatsapp = () => (connection ??= connect(log, (socket) => listener?.(socket)));
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -144,6 +163,7 @@ const weeklyName = WEEKDAYS[config.weeklyPassageDay] ?? 'never';
 log(`Scheduled "${config.sendAt}" (${config.timezone}). Posting to ${config.groupJid}.`);
 log(`${weeklyName}: passage. Other days: ${config.dailySlot}. Parts: ${config.sendParts.join('+')}.`);
 log(`Today is ${WEEKDAYS[weekdayIn(config.timezone)]} -> ${slotForToday()}.`);
+log(config.conversation ? 'Answering questions in the group.' : 'Conversation off; sending only.');
 
 // Catch up on a send missed while the process was down, but only shortly
 // after the fact -- see CATCH_UP_HOURS. Outside that window a restart must be

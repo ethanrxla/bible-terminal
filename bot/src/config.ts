@@ -72,6 +72,9 @@ export const config = {
     .map((part) => part.trim().toLowerCase())
     .filter((part): part is SendPart => PARTS.includes(part as SendPart)),
 
+  /** Answer questions in the group. Set CONVERSATION=0 to send only. */
+  conversation: (process.env.CONVERSATION ?? '1') !== '0',
+
   /** Print the messages instead of sending them. */
   dryRun: process.env.DRY_RUN === '1',
 } as const;

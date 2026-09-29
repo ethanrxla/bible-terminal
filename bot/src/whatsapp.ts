@@ -33,7 +33,15 @@ export interface Connection {
   ready: () => Promise<WASocket>;
 }
 
-export function connect(onLog: (message: string) => void): Connection {
+/**
+ * `onConnected` fires on every successful connection, not just the first.
+ * A dropped connection is replaced by a brand new socket, and anything bound
+ * to the old one -- event listeners above all -- is gone with it.
+ */
+export function connect(
+  onLog: (message: string) => void,
+  onConnected?: (socket: WASocket) => void,
+): Connection {
   let socket: WASocket | null = null;
   let resolveReady: ((value: WASocket) => void) | null = null;
   let readyPromise = new Promise<WASocket>((resolve) => {
@@ -103,6 +111,7 @@ export function connect(onLog: (message: string) => void): Connection {
       if (connection === 'open') {
         backoff = RECONNECT_MIN_MS;
         onLog('Connected to WhatsApp.');
+        onConnected?.(socket as WASocket);
         resolveReady?.(socket as WASocket);
         resolveReady = null;
       }

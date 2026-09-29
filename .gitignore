@@ -26,3 +26,8 @@ dist-ssr
 .env.local
 .vercel
 .env*
+
+# ...but the example files are documentation and must be committed. `.env*`
+# above would otherwise swallow them, which is why neither was ever in git.
+!.env.example
+!bot/.env.example

@@ -1,0 +1,45 @@
+# Install to /etc/systemd/system/bible-bot.service
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now bible-bot
+#   journalctl -u bible-bot -f
+#
+# Pair the phone BEFORE enabling this unit -- see bot/README.md. Pairing is
+# interactive and cannot happen under systemd.
+
+[Unit]
+Description=Bible Terminal WhatsApp bot
+Documentation=https://github.com/ethanrxla/bible-terminal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=biblebot
+Group=biblebot
+WorkingDirectory=/opt/bible-terminal/bot
+EnvironmentFile=/etc/bible-bot.env
+ExecStart=/usr/bin/node dist/index.js
+
+# The bot reconnects on its own; this is for the cases it cannot recover from
+# (an OOM kill, a crash on boot before the network is up).
+Restart=always
+RestartSec=10
+
+# A logged-out session exits 1 deliberately, because only a human with the
+# phone can fix it. Without this, systemd would restart it every 10s forever
+# and the unit would look healthy while doing nothing.
+RestartPreventExitStatus=1
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bible-bot
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/bible-bot
+
+[Install]
+WantedBy=multi-user.target

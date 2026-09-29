@@ -113,7 +113,7 @@ async function run(trigger: string, request?: SendRequest): Promise<void> {
     }
   }
 
-  const messages = messagesFor(payload, parts);
+  const messages = messagesFor(payload, parts, { includeLink: config.includeLink });
   if (messages.length === 0) {
     log(`SEND_PARTS selected nothing to send (${parts.join(',') || 'empty'}).`);
     return;

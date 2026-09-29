@@ -72,6 +72,9 @@ export const config = {
     .map((part) => part.trim().toLowerCase())
     .filter((part): part is SendPart => PARTS.includes(part as SendPart)),
 
+  /** Append the site link to the last message. Off: the group pins it. */
+  includeLink: process.env.INCLUDE_LINK === '1',
+
   /** Answer questions in the group. Set CONVERSATION=0 to send only. */
   conversation: (process.env.CONVERSATION ?? '1') !== '0',
 

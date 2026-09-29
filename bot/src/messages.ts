@@ -69,9 +69,18 @@ export function chunkOnParagraphs(text: string, limit = CHUNK_LIMIT): string[] {
  * than one rather than being truncated, and the question is dropped entirely
  * rather than invented when the model did not produce one.
  */
+export interface ShapeOptions {
+  /**
+   * Off by default. A link on every message reads as promotion in a chat
+   * people are trying to talk in; the group pins the site once instead.
+   */
+  includeLink?: boolean;
+}
+
 export function messagesFor(
   payload: DailyPayload,
   parts: readonly SendPart[] = ['scripture', 'interpretation', 'question'],
+  { includeLink = false }: ShapeOptions = {},
 ): string[] {
   const heading = payload.geezName
     ? `*${payload.reference}*  ·  ${payload.geezName}`
@@ -87,18 +96,13 @@ export function messagesFor(
     messages.push(...chunkOnParagraphs(`🕮 *Interpretation*\n\n${payload.interpretation}`));
   }
 
-  const askedQuestion = parts.includes('question') && Boolean(payload.question);
-  if (askedQuestion) {
-    messages.push(`💬 *For reflection*\n\n${payload.question}\n\n${payload.url}`);
+  if (parts.includes('question') && payload.question) {
+    messages.push(`💬 *For reflection*\n\n${payload.question}`);
   }
 
-  // The link rides on the last message whatever the selection, so there is
-  // always one way through to the full reading on the site. Keyed on whether
-  // a question was actually emitted, not on whether one was requested: only
-  // the passage produces a question, so on the six verse days `question` is
-  // selected, no question exists, and the link would otherwise be dropped
-  // entirely.
-  if (messages.length > 0 && !askedQuestion) {
+  // When enabled, exactly once, on the last message -- never repeated across
+  // a split interpretation.
+  if (includeLink && messages.length > 0) {
     messages[messages.length - 1] += `\n\n${payload.url}`;
   }
 

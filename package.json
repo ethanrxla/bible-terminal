@@ -15,7 +15,6 @@
     "test": "node --experimental-transform-types --test scripts/*.test.mjs"
   },
   "dependencies": {
-    "date-fns": "^3.4.0",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

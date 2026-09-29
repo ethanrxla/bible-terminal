@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Book, Sun, Moon, Sparkles, Library, Search as SearchIcon } from 'lucide-react';
 import Terminal from './components/Terminal';
 import HourlySection from './components/HourlySection';
@@ -6,7 +6,14 @@ import TranslationSelector from './components/TranslationSelector';
 import SearchBar from './components/SearchBar';
 import SearchResults from './components/SearchResults';
 import MultiTranslationVerse from './components/MultiTranslationVerse';
-import CanonBrowser, { type CanonTarget } from './components/CanonBrowser';
+import type { CanonTarget } from './components/CanonBrowser';
+
+/**
+ * The canon browser is the largest component in the app and sits behind a
+ * toggle most visitors never press. Loading it on demand keeps it, and the
+ * Ge'ez interlinear it pulls in, off the path to the day's reading.
+ */
+const CanonBrowser = lazy(() => import('./components/CanonBrowser'));
 import { useBible, BibleContent } from './hooks/useBible';
 import { useTheme } from './hooks/useTheme';
 import { useEdition } from './hooks/useEdition';
@@ -213,7 +220,15 @@ function App() {
           }
         >
           {showCanon ? (
-            <CanonBrowser target={canonTarget} />
+            <Suspense
+              fallback={
+                <p className="font-terminal text-sm opacity-70 py-8 text-center">
+                  Opening the canon…
+                </p>
+              }
+            >
+              <CanonBrowser target={canonTarget} />
+            </Suspense>
           ) : showSearch && searchQuery ? (
             <div className="space-y-8 py-4">
               {/* Multi-translation verse display */}

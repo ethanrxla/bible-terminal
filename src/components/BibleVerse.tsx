@@ -17,7 +17,7 @@ const BibleVerse: React.FC<BibleVerseProps> = ({ verse }) => {
 
   useEffect(() => {
     setIsVisible(false);
-    const timer = setTimeout(() => setIsVisible(true), 100);
+    const timer = setTimeout(() => setIsVisible(true), 30);
     return () => clearTimeout(timer);
   }, [verse]);
 
@@ -69,7 +69,7 @@ const BibleVerse: React.FC<BibleVerseProps> = ({ verse }) => {
   return (
     <div className={`
       p-5 rounded-md relative group
-      transition-all duration-1000
+      transition-all duration-300 motion-reduce:transition-none
       transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
       dark:bg-slate-800/50 dark:border-amber-700/30
       bg-white/90 border border-slate-200

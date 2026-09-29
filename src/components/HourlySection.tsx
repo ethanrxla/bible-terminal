@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Scroll, BookText, Library } from 'lucide-react';
 import BibleVerse from './BibleVerse';
 import BiblePassage from './BiblePassage';
 import AIInterpretation from './AIInterpretation';
-import PassageChat from './PassageChat';
+
+/**
+ * Deferred because it is what drags the AI client, its retry queue and the
+ * model chain onto the first load -- for a panel the reader has to open.
+ */
+const PassageChat = lazy(() => import('./PassageChat'));
 import type { BibleContent } from '../hooks/useBible';
 
 interface HourlySectionProps {
@@ -65,14 +70,16 @@ const HourlySection: React.FC<HourlySectionProps> = ({
         onNavigate={onNavigate}
       />
 
-      <PassageChat
-        passage={{
-          text: content.text,
-          reference: content.reference,
-          canon: content.section,
-        }}
-        onNavigate={onNavigate}
-      />
+      <Suspense fallback={null}>
+        <PassageChat
+          passage={{
+            text: content.text,
+            reference: content.reference,
+            canon: content.section,
+          }}
+          onNavigate={onNavigate}
+        />
+      </Suspense>
     </div>
   );
 };

@@ -11,7 +11,7 @@ const MultiTranslationVerse: React.FC<MultiTranslationVerseProps> = ({ verses, t
   
   useEffect(() => {
     setIsVisible(false);
-    const timer = setTimeout(() => setIsVisible(true), 100);
+    const timer = setTimeout(() => setIsVisible(true), 30);
     return () => clearTimeout(timer);
   }, [verses]);
 
@@ -20,7 +20,7 @@ const MultiTranslationVerse: React.FC<MultiTranslationVerseProps> = ({ verses, t
   return (
     <div className={`
       space-y-4
-      transition-all duration-1000
+      transition-all duration-300 motion-reduce:transition-none
       transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
     `}>
       {title && (

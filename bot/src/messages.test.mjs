@@ -102,3 +102,21 @@ test('SEND_PARTS: order is fixed, not caller-controlled', () => {
 test('SEND_PARTS: an empty selection sends nothing', () => {
   assert.deepEqual(messagesFor(base, []), []);
 });
+
+test('a verse day still links to the site', () => {
+  // Only the passage slot produces a question, so on the six verse days
+  // `question` is selected but absent -- the link must not vanish with it.
+  const messages = messagesFor({ ...base, slot: 'verse', question: null }, ['scripture', 'question']);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /bible-terminal\.vercel\.app/);
+});
+
+test('the link appears exactly once', () => {
+  for (const parts of [['scripture'], ['scripture', 'question'], ['scripture', 'interpretation', 'question']]) {
+    for (const question of [base.question, null]) {
+      const joined = messagesFor({ ...base, question }, parts).join('\n');
+      const count = joined.split('bible-terminal.vercel.app').length - 1;
+      assert.equal(count, 1, `parts=${parts} question=${question}: expected 1 link, got ${count}`);
+    }
+  }
+});

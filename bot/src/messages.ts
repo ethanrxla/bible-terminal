@@ -87,13 +87,18 @@ export function messagesFor(
     messages.push(...chunkOnParagraphs(`🕮 *Interpretation*\n\n${payload.interpretation}`));
   }
 
-  if (parts.includes('question') && payload.question) {
-    // The link goes on the last message whatever it is, so there is always
-    // one way through to the full interpretation on the site.
+  const askedQuestion = parts.includes('question') && Boolean(payload.question);
+  if (askedQuestion) {
     messages.push(`💬 *For reflection*\n\n${payload.question}\n\n${payload.url}`);
   }
 
-  if (messages.length > 0 && !parts.includes('question')) {
+  // The link rides on the last message whatever the selection, so there is
+  // always one way through to the full reading on the site. Keyed on whether
+  // a question was actually emitted, not on whether one was requested: only
+  // the passage produces a question, so on the six verse days `question` is
+  // selected, no question exists, and the link would otherwise be dropped
+  // entirely.
+  if (messages.length > 0 && !askedQuestion) {
     messages[messages.length - 1] += `\n\n${payload.url}`;
   }
 

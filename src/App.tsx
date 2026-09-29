@@ -34,10 +34,10 @@ function App() {
   const { theme, toggleTheme } = useTheme();
   const { editionId, changeEdition } = useEdition();
 
-  // The edition applies to the canon browser only. The three hourly slots are
-  // generated once per hour on the server and shared by every reader, so they
-  // cannot follow a per-visitor translation preference without ceasing to be
-  // shared -- which is the whole point of them.
+  // The edition applies to the canon browser only. The three readings are
+  // generated once per edition on the server and shared by every reader, so
+  // they cannot follow a per-visitor translation preference without ceasing
+  // to be shared -- which is the whole point of them.
   const handleEditionChange = (id: string) => {
     changeEdition(id);
   };
@@ -74,20 +74,33 @@ function App() {
   useEffect(() => {
     fetchData();
 
-    // Align the first refresh with the top of the hour, then repeat hourly.
-    // Both handles are owned by the effect so cleanup can clear each one --
-    // returning the interval cleanup from inside the timeout callback (as this
-    // did previously) leaks an interval on every remount.
-    let hourlyInterval: ReturnType<typeof setInterval> | undefined;
+    // One tick serves both cadences. 6am Eastern always falls on a UTC hour
+    // boundary, so the hourly alignment already lands on the daily rollover;
+    // a slot whose key has not changed is answered from cache without a
+    // request. See millisecondsUntilNextHour.
+    //
+    // Rescheduled each time rather than left on an interval: an interval
+    // drifts, and a laptop waking from sleep fires every missed tick at once.
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleNext = () => {
+      timer = setTimeout(() => {
+        fetchData();
+        scheduleNext();
+      }, millisecondsUntilNextHour());
+    };
+    scheduleNext();
 
-    const timer = setTimeout(() => {
-      fetchData();
-      hourlyInterval = setInterval(fetchData, 60 * 60 * 1000);
-    }, millisecondsUntilNextHour());
+    // A backgrounded tab's timers are throttled or suspended, so a phone
+    // reopened the next morning would otherwise sit on yesterday's passage
+    // until the next tick fired.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
       clearTimeout(timer);
-      if (hourlyInterval) clearInterval(hourlyInterval);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [fetchData]);
 
@@ -102,11 +115,13 @@ function App() {
         ? 'bg-slate-900 text-amber-50' 
         : 'bg-amber-50 text-slate-900'
     }`}>
-      <div className="container mx-auto px-4 py-8">
-        <header className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-3">
-            <Book className="h-8 w-8 text-amber-400" />
-            <h1 className="font-terminal font-bold text-2xl md:text-3xl tracking-tight">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        {/* Wraps rather than overflowing: the control cluster is six items
+            wide and used to push ~330px past the right edge of a phone. */}
+        <header className="flex flex-wrap justify-between items-center gap-y-3 mb-6 sm:mb-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <Book className="h-7 w-7 shrink-0 text-amber-400 sm:h-8 sm:w-8" />
+            <h1 className="font-terminal font-bold text-xl sm:text-2xl md:text-3xl tracking-tight truncate">
               Bible Terminal
             </h1>
             <div className="hidden md:flex items-center gap-2 ml-4 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30">
@@ -116,16 +131,20 @@ function App() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto sm:justify-end sm:gap-3">
             <TranslationSelector
               editionId={editionId}
               onEditionChange={handleEditionChange}
             />
-            <FontSizeControl
-              fontSize={fontSize}
-              onIncrease={increaseFontSize}
-              onDecrease={decreaseFontSize}
-            />
+            {/* Phones have browser text zoom; this is the first thing that can
+                go when horizontal room runs out. */}
+            <div className="hidden sm:flex">
+              <FontSizeControl
+                fontSize={fontSize}
+                onIncrease={increaseFontSize}
+                onDecrease={decreaseFontSize}
+              />
+            </div>
             <button
               onClick={() => { setShowCanon((v) => !v); setShowSearch(false); }}
               className={`p-2 rounded-full transition-colors ${
@@ -153,7 +172,11 @@ function App() {
             >
               <SearchIcon size={20} />
             </button>
-            <TimeDisplay />
+            {/* Three stacked lines of monospace, and purely decorative --
+                the largest single consumer of header width. */}
+            <div className="hidden lg:flex">
+              <TimeDisplay />
+            </div>
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-full transition-colors ${
@@ -216,20 +239,24 @@ function App() {
                   <p className="font-terminal text-sm">{hourlyError}</p>
                 </div>
               )}
+              {/* The daily passage leads: it is the reading the family
+                  studies together and the one sent to the group each
+                  morning, so it should not sit below two faster sections. */}
+              {dailyPassage && (
+                <HourlySection
+                  title="Daily Passage"
+                  content={dailyPassage}
+                  variant="passage"
+                  cadence="daily"
+                  onNavigate={handleNavigateToReference}
+                />
+              )}
+
               {dailyVerse && (
                 <HourlySection
                   title="Hourly Verse"
                   content={dailyVerse}
                   variant="verse"
-                  onNavigate={handleNavigateToReference}
-                />
-              )}
-
-              {dailyPassage && (
-                <HourlySection
-                  title="Hourly Passage"
-                  content={dailyPassage}
-                  variant="passage"
                   onNavigate={handleNavigateToReference}
                 />
               )}

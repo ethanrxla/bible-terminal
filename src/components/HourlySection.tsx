@@ -13,6 +13,8 @@ interface HourlySectionProps {
   variant: 'verse' | 'passage';
   /** Extra badge, e.g. to mark the Ethiopian-canon slot. */
   badge?: string;
+  /** How often this reading turns over, shown to the reader as a badge. */
+  cadence?: 'hourly' | 'daily';
   onNavigate?: (bookId: string, chapter: number) => void;
 }
 
@@ -21,6 +23,7 @@ const HourlySection: React.FC<HourlySectionProps> = ({
   content,
   variant,
   badge,
+  cadence = 'hourly',
   onNavigate,
 }) => {
   const icon =
@@ -43,7 +46,7 @@ const HourlySection: React.FC<HourlySectionProps> = ({
           </span>
         )}
         <span className="text-xs font-terminal bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
-          UPDATES HOURLY
+          {cadence === 'daily' ? 'UPDATES DAILY \u00b7 6AM ET' : 'UPDATES HOURLY'}
         </span>
       </div>
 
@@ -56,8 +59,8 @@ const HourlySection: React.FC<HourlySectionProps> = ({
       <AIInterpretation
         text={{ text: content.text, reference: content.reference }}
         type={variant}
-        hour={content.hourlyHour}
-        slot={content.hourlySlot}
+        editionKey={content.editionKey}
+        slot={content.editionSlot}
         canon={content.section}
         onNavigate={onNavigate}
       />

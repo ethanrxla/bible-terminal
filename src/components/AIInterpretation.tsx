@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
-import { currentHourKey, getHourlyInterpretation, type HourlySlot } from '../services/hourly';
+import { Sparkles, AlertCircle, RefreshCw, MessageCircleQuestion } from 'lucide-react';
+import {
+  currentEditionKey,
+  getEditionInterpretation,
+  type HourlySlot,
+} from '../services/hourly';
 import ScriptureText from './ScriptureText';
 import type { CanonSection } from '../types/canon';
 
@@ -14,7 +18,7 @@ interface AIInterpretationProps {
   /** Where the book sits in the EOTC canon, so the reading matches the tradition. */
   canon?: CanonSection;
   /** Identifies the shared edition this interpretation belongs to. */
-  hour?: string;
+  editionKey?: string;
   slot?: HourlySlot;
   /** Opens a cited reference in the canon browser. */
   onNavigate?: (bookId: string, chapter: number) => void;
@@ -24,11 +28,12 @@ const AIInterpretation: React.FC<AIInterpretationProps> = ({
   text,
   type,
   canon,
-  hour,
+  editionKey,
   slot,
   onNavigate,
 }) => {
   const [interpretation, setInterpretation] = useState('');
+  const [question, setQuestion] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState(false);
@@ -40,28 +45,28 @@ const AIInterpretation: React.FC<AIInterpretationProps> = ({
 
     let cancelled = false;
     setInterpretation('');
+    setQuestion(null);
     setIsFetching(true);
     setIsVisible(true);
     setError(false);
     setModel(null);
 
-    // Read, never generate. One interpretation is produced per hour on the
+    // Read, never generate. One interpretation is produced per edition on the
     // server and cached at the CDN, so every visitor on every device sees the
-    // same words -- and the model is called once an hour rather than once per
-    // page view.
-    getHourlyInterpretation(
-      hour ?? currentHourKey(),
-      slot ?? (type === 'passage' ? 'passage' : 'verse'),
-    )
+    // same words -- and the model is called once per edition rather than once
+    // per page view.
+    const resolvedSlot = slot ?? (type === 'passage' ? 'passage' : 'verse');
+    getEditionInterpretation(editionKey ?? currentEditionKey(resolvedSlot), resolvedSlot)
       .then((result) => {
         if (cancelled) return;
         setIsFetching(false);
         setModel(result.model);
         setInterpretation(result.text);
+        setQuestion(result.question);
       })
       .catch((err) => {
         if (cancelled) return;
-        console.error('Failed to load this hour\u2019s interpretation:', err);
+        console.error('Failed to load the shared interpretation:', err);
         setError(true);
         setIsFetching(false);
       });
@@ -69,7 +74,7 @@ const AIInterpretation: React.FC<AIInterpretationProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [text.text, text.reference, type, hour, slot, retry]);
+  }, [text.text, text.reference, type, editionKey, slot, retry]);
 
   const getTypeLabel = () => {
     switch (type) {
@@ -115,13 +120,13 @@ const AIInterpretation: React.FC<AIInterpretationProps> = ({
         {isFetching ? (
           <div className="flex items-center justify-center gap-2 py-4">
             <span className="font-terminal text-sm text-purple-400 animate-pulse">
-              Loading this hour&apos;s shared interpretation...
+              Loading the shared interpretation...
             </span>
           </div>
         ) : error ? (
           <div className="text-center py-4">
             <p className="font-terminal text-sm text-red-600 dark:text-red-400 mb-2">
-              This hour&apos;s interpretation is not ready yet.
+              The interpretation is not ready yet.
             </p>
             <button
               type="button"
@@ -133,10 +138,27 @@ const AIInterpretation: React.FC<AIInterpretationProps> = ({
             </button>
           </div>
         ) : (
-          <p className="font-verse text-base md:text-lg leading-relaxed text-purple-800 dark:text-purple-200 whitespace-pre-wrap">
-            <ScriptureText text={interpretation} onNavigate={onNavigate} />
+          <>
+            <p className="font-verse text-base md:text-lg leading-relaxed text-purple-800 dark:text-purple-200 whitespace-pre-wrap">
+              <ScriptureText text={interpretation} onNavigate={onNavigate} />
+            </p>
 
-          </p>
+            {/* Only the daily passage produces one, and it is the same
+                sentence the family group is sent each morning. */}
+            {question && (
+              <div className="mt-5 flex items-start gap-2 border-t border-purple-200 pt-4 dark:border-purple-700/30">
+                <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-purple-500 dark:text-purple-400" />
+                <div>
+                  <p className="font-terminal text-[0.65rem] uppercase tracking-wide text-purple-500 dark:text-purple-400">
+                    For reflection
+                  </p>
+                  <p className="font-verse text-base leading-relaxed text-purple-800 dark:text-purple-200">
+                    {question}
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -28,7 +28,7 @@ const TimeDisplay: React.FC = () => {
         <span className="font-bold">{format(currentTime, 'h:mm:ss a')}</span>
         <span className="text-xs opacity-70">{format(currentTime, 'MMMM d, yyyy')}</span>
         <span className="text-xs opacity-50 text-blue-600 dark:text-blue-400">
-          Next update: {getTimeUntilUpdate()}
+          Next hourly: {getTimeUntilUpdate()}
         </span>
       </div>
     </div>

@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { bibleApiService, BibleVerse, SearchResult, AVAILABLE_TRANSLATIONS, testamentOf } from '../services/bibleApi';
 import type { VerseContext } from '../services/canonRouter';
 import {
-  currentHourKey,
-  getHourlyContent,
+  currentEditionKey,
+  getEditionContent,
   type HourlySlot,
 } from '../services/hourly';
 import type { CanonSection } from '../types/canon';
@@ -19,9 +19,12 @@ export interface BibleContent extends BibleVerse {
   geezName?: string;
   /** Surrounding verses, so the interpretation can discuss the setting. */
   context?: VerseContext;
-  /** Immutable server edition that owns this content and its interpretation. */
-  hourlyHour?: string;
-  hourlySlot?: HourlySlot;
+  /**
+   * Immutable server edition that owns this content and its interpretation.
+   * An hour key for the hourly slots, a reading day for the passage.
+   */
+  editionKey?: string;
+  editionSlot?: HourlySlot;
 }
 
 export const useBible = () => {
@@ -36,26 +39,29 @@ export const useBible = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   /**
-   * Loads the server-owned UTC edition. The endpoint's deterministic selection
-   * and CDN cache mean every visitor receives these exact same three slots.
-   * `force` only bypasses this browser's cache; it never redraws the edition.
+   * Loads the server-owned edition. The endpoint's deterministic selection and
+   * CDN cache mean every visitor receives these exact same three slots.
+   *
+   * Each slot asks for its own key: the verse and Ethiopian readings turn over
+   * hourly, the passage once a day at 6am Eastern. Requesting one shared hour
+   * key for all three, as this used to, would ask the server for a passage
+   * edition that does not exist.
    */
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setHourlyError(null);
-    const hour = currentHourKey();
     const [verseResult, passageResult, ethiopianResult] = await Promise.allSettled([
-      getHourlyContent(hour, 'verse').then((content) => {
+      getEditionContent(currentEditionKey('verse'), 'verse').then((content) => {
         setDailyVerse(content);
         setIsLoading(false);
         return content;
       }),
-      getHourlyContent(hour, 'passage').then((content) => {
+      getEditionContent(currentEditionKey('passage'), 'passage').then((content) => {
         setDailyPassage(content);
         setIsLoading(false);
         return content;
       }),
-      getHourlyContent(hour, 'ethiopian').then((content) => {
+      getEditionContent(currentEditionKey('ethiopian'), 'ethiopian').then((content) => {
         setEthiopianVerse(content);
         setIsLoading(false);
         return content;
@@ -65,7 +71,7 @@ export const useBible = () => {
       console.error('Error fetching hourly verse:', verseResult.reason);
     }
     if (passageResult.status === 'rejected') {
-      console.error('Error fetching hourly passage:', passageResult.reason);
+      console.error('Error fetching the daily passage:', passageResult.reason);
     }
     if (ethiopianResult.status === 'rejected') {
       console.error('Error fetching Ethiopian canon verse:', ethiopianResult.reason);

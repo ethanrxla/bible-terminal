@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.api.json",
     "translate:geez": "node scripts/translate-geez.mjs",
     "bench:translation": "node scripts/bench-translation.mjs",
-    "gen:api-canon": "node scripts/gen-api-canon.mjs"
+    "gen:api-canon": "node scripts/gen-api-canon.mjs",
+    "test": "node --experimental-transform-types --test scripts/*.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",

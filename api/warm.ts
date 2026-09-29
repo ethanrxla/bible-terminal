@@ -1,10 +1,17 @@
 /**
- * Pre-generates the hour's three readings so no visitor has to wait for them.
+ * Pre-generates the three readings so no visitor has to wait for them.
  *
- * Without this the first person to arrive in a given hour pays the whole
- * generation cost (15-50s while the CDN entry is cold) and watches a slot sit
- * on "loading"; everyone after them is served from the edge in milliseconds.
- * Running this on the hour moves that cost off the reader entirely.
+ * Without this the first person to arrive pays the whole generation cost
+ * (15-50s while the CDN entry is cold) and watches a slot sit on "loading";
+ * everyone after them is served from the edge in milliseconds. Running this on
+ * the hour moves that cost off the reader entirely.
+ *
+ * It also covers the daily passage, and that is why no second cron exists.
+ * The passage's key comes from Intl inside the function rather than from the
+ * time this runs, so a UTC schedule cannot drift away from a 6am-Eastern
+ * boundary that shifts with DST: whichever UTC hour happens to contain 6am ET
+ * that week, that hour's run does the cold daily generation. The other 23 runs
+ * re-request a key already at the edge and cost nothing.
  *
  * Each slot is warmed by requesting /api/hourly, which means every slot gets
  * its own function invocation and its own 60s budget rather than sharing this
@@ -18,10 +25,41 @@
 
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
-const SLOTS = ['verse', 'passage', 'ethiopian'] as const;
+const EDITION_TZ = 'America/New_York';
 
 function hourKey(date = new Date()): string {
   return date.toISOString().slice(0, 13);
+}
+
+/**
+ * Copied from api/hourly.ts, which cannot be imported here. Must stay
+ * identical to it -- a disagreement would warm a key nobody reads.
+ */
+function dayKey(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: EDITION_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const at = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  const ymd = `${at('year')}-${at('month')}-${at('day')}`;
+  return Number(at('hour')) >= 6 ? ymd : previousDayKey(ymd);
+}
+
+function previousDayKey(key: string): string {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+}
+
+function targets() {
+  return [
+    { slot: 'verse', key: hourKey() },
+    { slot: 'ethiopian', key: hourKey() },
+    { slot: 'passage', key: dayKey() },
+  ];
 }
 
 function originFor(request: Request): string {
@@ -47,24 +85,28 @@ export async function GET(request: Request): Promise<Response> {
     }
   }
 
-  const hour = hourKey();
+  const slots = targets();
   const origin = originFor(request);
   const budget = Date.now() + 50_000;
 
   const results = await Promise.allSettled(
-    SLOTS.map(async (slot) => {
-      const response = await fetch(`${origin}/api/hourly?hour=${hour}&slot=${slot}`, {
+    slots.map(async ({ slot, key }) => {
+      const response = await fetch(`${origin}/api/hourly?key=${key}&slot=${slot}`, {
         signal: AbortSignal.timeout(Math.max(1000, budget - Date.now())),
       });
       const body = (await response.json().catch(() => ({}))) as {
         content?: { reference?: string };
-        interpretation?: unknown;
+        interpretation?: { question?: string | null } | null;
       };
       return {
         slot,
+        key,
         status: response.status,
         reference: body.content?.reference ?? null,
         interpreted: Boolean(body.interpretation),
+        // Only the passage asks for one; null here on the passage line means
+        // the family group loses its discussion message.
+        question: body.interpretation?.question ?? null,
       };
     }),
   );
@@ -72,10 +114,10 @@ export async function GET(request: Request): Promise<Response> {
   const warmed = results.map((result, index) =>
     result.status === 'fulfilled'
       ? result.value
-      : { slot: SLOTS[index], error: String(result.reason).slice(0, 120) },
+      : { slot: slots[index].slot, key: slots[index].key, error: String(result.reason).slice(0, 120) },
   );
 
-  return new Response(JSON.stringify({ hour, warmed }, null, 2), {
+  return new Response(JSON.stringify({ hour: hourKey(), day: dayKey(), warmed }, null, 2), {
     status: 200,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });

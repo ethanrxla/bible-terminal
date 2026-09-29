@@ -1,16 +1,22 @@
 /**
- * The shared hourly edition.
+ * The shared edition.
  *
- * One passage and one interpretation per hour, produced once and served to
- * every visitor. This exists because generating in the browser gave each
- * reader a different interpretation of the same verse -- two devices open on
- * the same hour disagreed about what the passage meant, and every visit spent
+ * One reading and one interpretation per edition key, produced once and served
+ * to every visitor. This exists because generating in the browser gave each
+ * reader a different interpretation of the same verse -- two devices open at
+ * the same time disagreed about what the passage meant, and every visit spent
  * more of the NVIDIA quota.
  *
+ * Two cadences share this one function, decided by CADENCE below. The `verse`
+ * and `ethiopian` slots turn over hourly. The `passage` slot turns over once a
+ * day at 6am America/New_York, because it is the reading a family studies
+ * together and is pushed to WhatsApp each morning -- an hourly passage is too
+ * fast to sit with.
+ *
  * How sharing is achieved without a database: selection is a seeded PRNG keyed
- * on (hour, slot), so it is reproducible rather than stored, and the response
- * is cached at Vercel's CDN for the rest of the hour. The first visitor of an
- * hour pays for the generation; everyone after that is served the identical
+ * on (key, slot), so it is reproducible rather than stored, and the response
+ * is cached at Vercel's CDN until that key rolls over. The first visitor of an
+ * edition pays for the generation; everyone after that is served the identical
  * bytes from the edge.
  *
  * NOTE ON STRUCTURE: this file is deliberately self-contained and imports
@@ -1263,20 +1269,57 @@ const GEEZ_DATA = 'https://cdn.jsdelivr.net/gh/LPettay/ethiopian-bible@main/publ
 
 /**
  * Ordered by how quickly they finish, because the whole generation has to fit
- * inside the 60s function limit. Measured on a three-paragraph interpretation:
- * super-120b ~19s, nano ~7s, gpt-oss ~7s. The 550B Ultra model used in the
- * browser takes one to three minutes and cannot be used here.
+ * inside the 60s function limit.
+ *
+ * `budgetMs` is how long one attempt at that model may run, measured on a
+ * three-paragraph interpretation with roughly 2x headroom: super-120b ~15-17s,
+ * kimi-k3 ~28s, gpt-oss-20b ~48s. A single flat cap does not work here --
+ * 32s silently strangled anything slower than the primary.
+ *
+ * The 550B Ultra model the browser uses takes one to three minutes and cannot
+ * be used here.
+ *
+ * NOTE: models on this endpoint are retired without warning and answer 410
+ * "end of life" afterwards. `openai/gpt-oss-120b` and
+ * `nvidia/nemotron-3-nano-30b-a3b` both went that way, which left the chain
+ * with no working fallback at all -- every entry below was verified live when
+ * it was added. If interpretations start failing, check this first.
  */
 const MODELS = [
-  { id: 'nvidia/nemotron-3-super-120b-a12b', label: 'Nemotron 3 Super', prefix: 'detailed thinking off\n\n' },
-  { id: 'openai/gpt-oss-120b', label: 'GPT-OSS 120B', prefix: '' },
-  { id: 'nvidia/nemotron-3-nano-30b-a3b', label: 'Nemotron 3 Nano', prefix: 'detailed thinking off\n\n' },
+  {
+    id: 'nvidia/nemotron-3-super-120b-a12b',
+    label: 'Nemotron 3 Super',
+    prefix: 'detailed thinking off\n\n',
+    budgetMs: 30_000,
+  },
+  { id: 'moonshotai/kimi-k3', label: 'Kimi K3', prefix: '', budgetMs: 45_000 },
+  { id: 'openai/gpt-oss-20b', label: 'GPT-OSS 20B', prefix: '', budgetMs: 55_000 },
 ];
+
+/** The chain's fastest member, for the one-sentence question top-up. */
+const QUESTION_MODEL = MODELS[0];
+
+/**
+ * Verses in a passage-slot reading. Six was chosen when the passage rotated
+ * hourly; now that it stands for a whole day there is room to raise it -- the
+ * interpretation budget and WhatsApp's ~4096-character message limit both fit
+ * comfortably past a dozen.
+ */
+const PASSAGE_VERSES = 6;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const clean = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-/** Stable 32-bit PRNG: the same hour and slot select the same text everywhere. */
+/**
+ * Scripture text only. bible-api returns verses with the source edition's hard
+ * line breaks still in them ("I shall be a lady for ever:\nso that thou didst
+ * not..."), which read as broken paragraphs in the app and as ragged text in a
+ * WhatsApp message. Not applied to interpretations, where the blank lines
+ * between paragraphs are meaningful.
+ */
+const collapse = (value: unknown): string => clean(value).replace(/\s+/g, ' ');
+
+/** Stable 32-bit PRNG: the same key and slot select the same text everywhere. */
 function seededRandom(seed: string): () => number {
   let hash = 2166136261;
   for (let index = 0; index < seed.length; index += 1) {
@@ -1311,28 +1354,44 @@ export interface HourlyContent {
 }
 
 /**
- * Picks and loads the passage for one (hour, slot). Deterministic: given the
- * same inputs it always resolves to the same verses.
+ * Picks and loads the reading for one (key, slot). Deterministic: given the
+ * same inputs it always resolves to the same verses. The key is an hour key
+ * for the hourly slots and a day key for the passage slot; the seeding does
+ * not care which, it only needs a stable string.
+ *
+ * This base is the single-verse hourly reading. The parts that differ per slot
+ * -- how many verses to take, which books are eligible, what the content calls
+ * itself -- are the three protected methods below, so a slot that behaves
+ * differently is its own subclass rather than a conditional threaded through
+ * `load()`. See DailyPassageSelector and EthiopianSelector.
  */
 class EditionSelector {
-  private readonly random: () => number;
+  protected readonly random: () => number;
 
   constructor(
-    hour: string,
-    private readonly slot: Slot,
+    key: string,
+    protected readonly slot: Slot,
   ) {
-    this.random = seededRandom(`${hour}:${slot}`);
+    this.random = seededRandom(`${key}:${slot}`);
+  }
+
+  /** How many consecutive verses this reading shows. */
+  protected verseCount(): number {
+    return 1;
+  }
+
+  /** What the reading calls itself to the client and to the interpreter. */
+  protected contentType(): 'verse' | 'passage' {
+    return 'verse';
   }
 
   /** Books eligible for this slot, excluding any with no English to show. */
-  private candidates(): CompactBook[] {
-    const readable = (book: CompactBook) =>
-      book.p.some((part) => part.k === 'a' || part.e !== 'none');
+  protected candidates(): CompactBook[] {
+    return CANON.filter(EditionSelector.readable);
+  }
 
-    if (this.slot === 'ethiopian') {
-      return CANON.filter((book) => book.s !== 'protocanonical' && readable(book));
-    }
-    return CANON.filter(readable);
+  protected static readable(book: CompactBook): boolean {
+    return book.p.some((part) => part.k === 'a' || part.e !== 'none');
   }
 
   /** Chapters we can show English for, as a prefix of the book's range. */
@@ -1380,8 +1439,7 @@ class EditionSelector {
     const usable = verses.filter((verse) => verse.text.length > 0);
     if (usable.length === 0) throw new Error(`${book.n} ${chapter} has no readable text`);
 
-    // The passage slot shows a run of verses; the others show one.
-    const wanted = this.slot === 'passage' ? Math.min(6, usable.length) : 1;
+    const wanted = Math.min(this.verseCount(), usable.length);
     const start = Math.floor(this.random() * (usable.length - wanted + 1));
     const chosen = usable.slice(start, start + wanted);
     const first = chosen[0];
@@ -1403,7 +1461,7 @@ class EditionSelector {
       book_name: part.l,
       chapter: local,
       verse: first.verse,
-      type: this.slot === 'passage' ? 'passage' : 'verse',
+      type: this.contentType(),
       testament: book.t,
       book: part.l,
       section: book.s,
@@ -1422,7 +1480,7 @@ class EditionSelector {
     const data = (await response.json()) as { verses?: Array<{ text?: string; verse?: number }> };
     return (data.verses ?? []).map((verse, index) => ({
       verse: verse.verse ?? index + 1,
-      text: clean(verse.text),
+      text: collapse(verse.text),
     }));
   }
 
@@ -1439,18 +1497,84 @@ class EditionSelector {
     return (data.verses ?? []).map((verse) => ({
       verse: Number(verse.num),
       text:
-        clean(verse.translation) ||
-        clean(verse.translations?.lxx) ||
-        clean(verse.translations?.kjv),
+        collapse(verse.translation) ||
+        collapse(verse.translations?.lxx) ||
+        collapse(verse.translations?.kjv),
     }));
   }
 }
 
-/** Generates the interpretation, walking the model list until one answers. */
-class Interpreter {
-  constructor(private readonly apiKey: string) {}
+/**
+ * The daily passage: a run of verses rather than one, turning over at 6am
+ * Eastern. This is the reading the family studies together and the one pushed
+ * to WhatsApp each morning, so it is deliberately its own type -- its length,
+ * its cadence (see CADENCE) and its interpretation prompt (which also asks for
+ * a discussion question) all differ from the hourly readings.
+ */
+class DailyPassageSelector extends EditionSelector {
+  constructor(key: string) {
+    super(key, 'passage');
+  }
 
-  private messages(content: HourlyContent): { system: string; user: string } {
+  protected override verseCount(): number {
+    return PASSAGE_VERSES;
+  }
+
+  protected override contentType(): 'verse' | 'passage' {
+    return 'passage';
+  }
+}
+
+/** The hourly reading drawn only from books outside the Protestant canon. */
+class EthiopianSelector extends EditionSelector {
+  constructor(key: string) {
+    super(key, 'ethiopian');
+  }
+
+  protected override candidates(): CompactBook[] {
+    return CANON.filter((book) => book.s !== 'protocanonical' && EditionSelector.readable(book));
+  }
+}
+
+function selectorFor(key: string, slot: Slot): EditionSelector {
+  if (slot === 'passage') return new DailyPassageSelector(key);
+  if (slot === 'ethiopian') return new EthiopianSelector(key);
+  return new EditionSelector(key, slot);
+}
+
+interface Interpretation {
+  text: string;
+  /** A discussion prompt. Only the daily passage produces one. */
+  question: string | null;
+  model: { id: string; label: string };
+}
+
+/**
+ * Generates the interpretation, walking the model list until one answers.
+ *
+ * This base produces prose only. What the daily passage additionally needs --
+ * a discussion question for the family group -- lives in
+ * DailyPassageInterpreter, reached through the three hooks below, so the
+ * hourly prompt is not disturbed by it.
+ */
+class Interpreter {
+  constructor(protected readonly apiKey: string) {}
+
+  /** Appended to the system prompt; empty for the hourly readings. */
+  protected systemSuffix(): string {
+    return '';
+  }
+
+  protected maxTokens(): number {
+    return 2048;
+  }
+
+  /** Last chance to pull structure out of the raw completion. */
+  protected async finish(raw: string, _deadline: number, _content: HourlyContent) {
+    return { text: raw, question: null as string | null };
+  }
+
+  protected messages(content: HourlyContent): { system: string; user: string } {
     const geez = content.geezName ? ` Its Ge’ez title is ${content.geezName}.` : '';
     const canon =
       content.section === 'ethiopian'
@@ -1461,7 +1585,7 @@ class Interpreter {
 
     const system = `You are a biblical scholar and historian writing for a reader of the Ethiopian Orthodox Tewahedo Bible. You know the historical setting of each book, the literary shape of its argument, and the tradition that received it.${canon}
 
-Write three short paragraphs, with no headings and no bullet points. First, place the passage in its historical setting, naming the period, place, audience, and relevant political or religious pressure where known. Second, explain what happens in the supplied surrounding verses and how the passage connects to them, including an original-language detail or custom only when it materially helps. Third, draw out its meaning for a reader today, grounded in that setting. Be specific; do not write generic encouragement or merely restate the verse. State uncertainty rather than inventing detail.`;
+Write three short paragraphs, with no headings and no bullet points. First, place the passage in its historical setting, naming the period, place, audience, and relevant political or religious pressure where known. Second, explain what happens in the supplied surrounding verses and how the passage connects to them, including an original-language detail or custom only when it materially helps. Third, draw out its meaning for a reader today, grounded in that setting. Be specific; do not write generic encouragement or merely restate the verse. State uncertainty rather than inventing detail.${this.systemSuffix()}`;
 
     let user = `Interpret this Bible ${content.type} from ${content.reference}:\n\n"${content.text}"`;
     if (content.context?.before || content.context?.after) {
@@ -1474,7 +1598,7 @@ Write three short paragraphs, with no headings and no bullet points. First, plac
     return { system, user };
   }
 
-  private transient(status: number, message: string): boolean {
+  protected transient(status: number, message: string): boolean {
     return (
       status === 429 ||
       status >= 500 ||
@@ -1482,7 +1606,7 @@ Write three short paragraphs, with no headings and no bullet points. First, plac
     );
   }
 
-  async run(content: HourlyContent, deadline: number) {
+  async run(content: HourlyContent, deadline: number): Promise<Interpretation> {
     const { system, user } = this.messages(content);
     let lastError = 'no model attempted';
 
@@ -1493,10 +1617,10 @@ Write three short paragraphs, with no headings and no bullet points. First, plac
         try {
 
         // Bound each attempt so one slow model cannot consume the whole 60s
-        // function budget. Measured generations are 7-20s locally but run
-        // longer from Vercel's region, so the cap is 32s -- past that, the
-        // remaining budget is better spent on the next (faster) model.
-        const remaining = Math.max(1000, Math.min(32_000, deadline - Date.now()));
+        // function budget, but bound it by what that model actually needs --
+        // see budgetMs. Generations run longer from Vercel's region than
+        // locally, hence the headroom.
+        const remaining = Math.max(1000, Math.min(model.budgetMs, deadline - Date.now()));
 
         const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
           method: 'POST',
@@ -1511,7 +1635,7 @@ Write three short paragraphs, with no headings and no bullet points. First, plac
               { role: 'system', content: model.prefix + system },
               { role: 'user', content: user },
             ],
-            max_tokens: 2048,
+            max_tokens: this.maxTokens(),
             temperature: 0.7,
           }),
         });
@@ -1530,7 +1654,10 @@ Write three short paragraphs, with no headings and no bullet points. First, plac
           choices?: Array<{ message?: { content?: string } }>;
         };
         const text = clean(data.choices?.[0]?.message?.content);
-        if (text) return { text, model: { id: model.id, label: model.label } };
+        if (text) {
+          const parsed = await this.finish(text, deadline, content);
+          return { ...parsed, model: { id: model.id, label: model.label } };
+        }
 
         lastError = `${model.id}: empty response`;
         } catch (error) {
@@ -1543,6 +1670,92 @@ Write three short paragraphs, with no headings and no bullet points. First, plac
 
     throw new Error(lastError);
   }
+}
+
+/**
+ * Models bold the sentinel unprompted and sometimes indent it, so match
+ * loosely. Anchored to a line start so a "QUESTION:" inside the prose itself
+ * cannot be mistaken for the delimiter.
+ */
+const QUESTION_SENTINEL = /^[ \t]*\**\s*QUESTION\s*\**[ \t]*:[ \t]*(.+?)[ \t]*$/im;
+
+/**
+ * The daily passage's interpreter. Beyond the prose it asks for one discussion
+ * question, which is sent to the family group as its own message.
+ *
+ * The question rides along on the same completion behind a sentinel line
+ * rather than arriving as JSON or as a second call. JSON mode is not
+ * uniformly supported across the three models in MODELS, and a failed parse
+ * would cost the whole interpretation; a second round trip costs 7-20s against
+ * a 55s deadline that already budgets 32s per attempt. A sentinel costs
+ * nothing and degrades to `question: null`.
+ */
+class DailyPassageInterpreter extends Interpreter {
+  protected override systemSuffix(): string {
+    return (
+      '\n\nAfter the three paragraphs, write one final line beginning exactly with' +
+      ' "QUESTION:" followed by a single open-ended question of fewer than 25 words' +
+      ' that a family could discuss together. Ask what the passage asks of the reader;' +
+      ' do not ask for facts the paragraphs already state. Write nothing after that line.'
+    );
+  }
+
+  /** Slightly above the base, so the sentinel is not cut off mid-question. */
+  protected override maxTokens(): number {
+    return 2200;
+  }
+
+  protected override async finish(raw: string, deadline: number, content: HourlyContent) {
+    const match = raw.match(QUESTION_SENTINEL);
+    if (match && match.index !== undefined) {
+      return {
+        text: raw.slice(0, match.index).trim(),
+        question: match[1].replace(/\*\*/g, '').trim() || null,
+      };
+    }
+
+    // The model ignored the format. One cheap top-up beats losing the message,
+    // but only if there is comfortably enough budget left to spend on it.
+    const question = Date.now() < deadline - 12_000 ? await this.topUp(content) : null;
+    return { text: raw.trim(), question };
+  }
+
+  private async topUp(content: HourlyContent): Promise<string | null> {
+    try {
+      const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        signal: AbortSignal.timeout(10_000),
+        headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // The fastest model in the chain; this only has to write one sentence.
+          model: QUESTION_MODEL.id,
+          messages: [
+            {
+              role: 'system',
+              content:
+                QUESTION_MODEL.prefix +
+                'Reply with one open-ended question of fewer than 25 words' +
+                ' that a family could discuss together about the passage. Output the question alone,' +
+                ' with no preamble, label, or quotation marks.',
+            },
+            { role: 'user', content: `${content.reference}\n\n"${content.text}"` },
+          ],
+          max_tokens: 120,
+          temperature: 0.6,
+        }),
+      });
+      if (!response.ok) return null;
+      const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      return clean(data.choices?.[0]?.message?.content).split('\n')[0].trim() || null;
+    } catch (error) {
+      console.warn('Question top-up failed:', (error as Error).message);
+      return null;
+    }
+  }
+}
+
+function interpreterFor(slot: Slot, apiKey: string): Interpreter {
+  return slot === 'passage' ? new DailyPassageInterpreter(apiKey) : new Interpreter(apiKey);
 }
 
 /** Collapses concurrent requests for the same edition into one generation. */
@@ -1560,16 +1773,94 @@ function hourKey(date = new Date()): string {
   return date.toISOString().slice(0, 13);
 }
 
-function json(body: unknown, status = 200, shareable = false): Response {
+const EDITION_TZ = 'America/New_York';
+
+/**
+ * The editorial day, which rolls over at 6am Eastern rather than at UTC
+ * midnight, so the passage is already settled when the morning reading goes
+ * out. Intl is the timezone database here -- Node on Vercel ships full ICU, so
+ * no tz library is needed and DST is handled by the runtime rather than by us.
+ */
+export function dayKey(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: EDITION_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const at = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  const ymd = `${at('year')}-${at('month')}-${at('day')}`;
+  // Before 6am Eastern, yesterday's edition is still the current one.
+  return Number(at('hour')) >= 6 ? ymd : previousDayKey(ymd);
+}
+
+/**
+ * Calendar arithmetic, deliberately -- NOT `new Date(now - 86_400_000)`.
+ * Subtracting 24 hours of real time lands on the wrong editorial day for one
+ * hour each spring: at 06:30 EDT on the spring-forward Sunday, 24h earlier is
+ * 05:30 EST Saturday, which is before 6am and so resolves to *Friday*,
+ * silently skipping Saturday's edition. Stepping the date string has no wall
+ * clock to get wrong.
+ */
+export function previousDayKey(key: string): string {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day - 1)).toISOString().slice(0, 10);
+}
+
+/**
+ * Which cadence each slot turns over on. The passage is the shared daily
+ * reading; the other two stay hourly so the page still moves between days.
+ */
+const CADENCE: Record<Slot, 'hour' | 'day'> = {
+  verse: 'hour',
+  passage: 'day',
+  ethiopian: 'hour',
+};
+
+function editionKeyFor(slot: Slot, date = new Date()): string {
+  return CADENCE[slot] === 'day' ? dayKey(date) : hourKey(date);
+}
+
+/** The edition immediately before `current`, in that slot's own cadence. */
+function priorKeyFor(slot: Slot, current: string): string {
+  return CADENCE[slot] === 'day'
+    ? previousDayKey(current)
+    : hourKey(new Date(Date.now() - 3_600_000));
+}
+
+/**
+ * How long the edge may keep a response. The edition key is part of the URL,
+ * so every response is immutable content at a unique address and the TTL can
+ * safely exceed the cadence -- a week for the daily passage costs nothing and
+ * survives a warm failure.
+ */
+const CDN_TTL: Record<Slot, number> = {
+  verse: 3_600,
+  ethiopian: 3_600,
+  passage: 604_800,
+};
+
+/**
+ * `cache` is the slot whose policy applies, or false for "do not store". Only
+ * a complete edition is ever passed a slot -- see the note at the return of
+ * GET, which matters more now that a frozen failure would last a day.
+ */
+function json(body: unknown, status = 200, cache: Slot | false = false): Response {
+  const browserMaxAge = cache && CADENCE[cache] === 'day' ? 600 : 60;
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'Content-Type': 'application/json',
       // The CDN copy is what makes the edition shared: one generation per
-      // hour is reused for every visitor until the hour rolls over.
-      'Cache-Control': shareable ? 'public, max-age=60' : 'no-store',
-      ...(shareable
-        ? { 'Vercel-CDN-Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400, stale-if-error=86400' }
+      // edition key is reused for every visitor until that key rolls over.
+      'Cache-Control': cache ? `public, max-age=${browserMaxAge}` : 'no-store',
+      ...(cache
+        ? {
+            'Vercel-CDN-Cache-Control':
+              `public, s-maxage=${CDN_TTL[cache]}, stale-while-revalidate=604800, stale-if-error=604800`,
+          }
         : {}),
     },
   });
@@ -1590,31 +1881,44 @@ export async function GET(request: Request): Promise<Response> {
   // base to parse against.
   const url = new URL(request.url, 'http://localhost');
   const slot = (url.searchParams.get('slot') ?? 'verse') as Slot;
-  const requested = url.searchParams.get('hour') ?? hourKey();
 
   if (!['verse', 'passage', 'ethiopian'].includes(slot)) {
     return json({ error: 'Unknown slot' }, 400);
   }
 
-  // Only the current or previous hour, so a crawler cannot walk arbitrary keys
-  // and manufacture unlimited model calls.
-  const now = hourKey();
-  const previous = hourKey(new Date(Date.now() - 3600_000));
-  if (requested !== now && requested !== previous) {
+  // `hour` is the pre-daily name for this parameter, kept so a tab left open
+  // across the rollout keeps working.
+  let requested = url.searchParams.get('key') ?? url.searchParams.get('hour') ?? editionKeyFor(slot);
+
+  // COMPAT: bundles cached before the daily rollout still send an hour key for
+  // the passage slot. Coerce rather than reject, so a stale tab sees today's
+  // passage instead of an error. Remove once the v5 localStorage generation
+  // has aged out.
+  if (CADENCE[slot] === 'day' && requested.length === 13) {
+    requested = dayKey(new Date(`${requested}:00:00Z`));
+  }
+
+  // Only the current or previous edition, so a crawler cannot walk arbitrary
+  // keys and manufacture unlimited model calls.
+  const current = editionKeyFor(slot);
+  if (requested !== current && requested !== priorKeyFor(slot, current)) {
     return json({ error: 'Edition expired' }, 400);
   }
 
   try {
     const content = await once(`content:${requested}:${slot}`, () =>
-      new EditionSelector(requested, slot).load(),
+      selectorFor(requested, slot).load(),
     );
 
+    // `hour` is echoed alongside `key` for the same one-deploy reason as above.
+    const envelope = { key: requested, hour: requested, slot, content };
+
     if (!process.env.NVIDIA_API_KEY) {
-      return json({ hour: requested, slot, content, interpretation: null }, 200, true);
+      return json({ ...envelope, interpretation: null }, 200, slot);
     }
 
     const interpretation = await once(`interpretation:${requested}:${slot}`, () =>
-      new Interpreter(process.env.NVIDIA_API_KEY as string).run(content, deadline),
+      interpreterFor(slot, process.env.NVIDIA_API_KEY as string).run(content, deadline),
     ).catch((error: Error) => {
       console.warn('Interpretation failed:', error.message);
       return null;
@@ -1622,9 +1926,10 @@ export async function GET(request: Request): Promise<Response> {
 
     // Only a complete edition is allowed into the shared CDN cache. Caching a
     // failed generation would freeze "interpretation unavailable" in place for
-    // the rest of the hour for every visitor; leaving it uncached lets the next
-    // request try again.
-    return json({ hour: requested, slot, content, interpretation }, 200, interpretation !== null);
+    // every visitor until the key rolls over -- which for the daily passage is
+    // a whole day, so this matters more than it used to. Leaving it uncached
+    // lets the next request try again.
+    return json({ ...envelope, interpretation }, 200, interpretation !== null ? slot : false);
   } catch (error) {
     return json({ error: (error as Error).message }, 502);
   }

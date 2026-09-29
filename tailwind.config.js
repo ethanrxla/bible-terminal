@@ -8,6 +8,11 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      // Small phones are 320-390px wide; the default `sm` at 640px is far too
+      // late to be the first step up from a single column.
+      screens: {
+        xs: '400px',
+      },
       colors: {
         bible: {
           gold: '#FBBF24',

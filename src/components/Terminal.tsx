@@ -20,7 +20,10 @@ const Terminal: React.FC<TerminalProps> = ({ children, isLoading = false }) => {
         <div className="font-terminal text-sm font-bold">bible@kjv:~</div>
       </div>
       
-      <div className="p-6 overflow-auto max-h-[80vh]">
+      {/* No inner scroll container: nesting one inside the page scroll gives
+          a phone two scrollbars, breaks momentum scrolling and stops the URL
+          bar from collapsing. The page itself is the scroller. */}
+      <div className="p-4 sm:p-6">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-10 w-10 text-amber-400 animate-spin mb-4" />

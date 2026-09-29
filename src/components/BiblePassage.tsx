@@ -90,18 +90,23 @@ const BiblePassage: React.FC<BiblePassageProps> = ({ passage }) => {
       bg-white/90 border border-slate-200
       shadow-sm
     `}>
-      <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Reveal-on-hover only where hover exists. On a phone there is no
+          hover, so these were invisible and the reader had no way to copy or
+          share at all. */}
+      <div className="absolute top-3 right-3 flex gap-2 transition-opacity opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100">
         <button
           onClick={handleCopy}
-          className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-slate-100 p-2.5 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
           title="Copy passage"
+          aria-label="Copy passage"
         >
           {copied ? <Check className="h-4 w-4 text-green-600 dark:text-green-400" /> : <Copy className="h-4 w-4" />}
         </button>
         <button
           onClick={handleShare}
-          className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-slate-100 p-2.5 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
           title="Share passage"
+          aria-label="Share passage"
         >
           <Share2 className="h-4 w-4" />
         </button>

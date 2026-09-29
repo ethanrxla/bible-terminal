@@ -15,6 +15,9 @@ import { CANON_SECTION_LABELS } from '../types/canon';
 import type { CanonSection } from '../types/canon';
 import GeezInterlinear from './GeezInterlinear';
 
+/** Chapters shown at once before the picker splits into range pages. */
+const CHAPTER_PAGE_SIZE = 50;
+
 const SECTION_BADGE: Record<CanonSection, string> = {
   protocanonical:
     'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
@@ -37,7 +40,7 @@ const BookGroup: React.FC<BookGroupProps> = ({ title, subtitle, books, onSelect 
       <h3 className="font-terminal text-sm font-bold">{title}</h3>
       <p className="text-xs opacity-70">{subtitle}</p>
     </div>
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
       {books.map((book) => {
         const readable = isReadable(book);
         return (
@@ -100,6 +103,12 @@ const CanonBrowser: React.FC<CanonBrowserProps> = ({ onReadVerse, target }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showInterlinear, setShowInterlinear] = useState(false);
+  /** Which block of 50 chapters the picker is showing, for long books. */
+  const [chapterPage, setChapterPage] = useState(0);
+
+  useEffect(() => {
+    setChapterPage(0);
+  }, [book]);
 
   const chapters = useMemo(() => (book ? chapterCount(book) : 0), [book]);
 
@@ -313,16 +322,48 @@ const CanonBrowser: React.FC<CanonBrowserProps> = ({ onReadVerse, target }) => {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          {Array.from({ length: chapters }, (_, index) => index + 1).map((n) => (
-            <button
-              key={n}
-              onClick={() => setChapter(n)}
-              className="w-11 h-11 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-terminal text-sm hover:border-amber-400 dark:hover:border-amber-600 transition-colors"
-            >
-              {n}
-            </button>
-          ))}
+        {/* Psalms is 150 chapters. Rendering every one put 150 buttons in the
+            DOM and, on a phone, a wall of numbers no thumb could navigate --
+            so long books are paged into blocks of 50. */}
+        {chapters > CHAPTER_PAGE_SIZE && (
+          <div className="flex flex-wrap gap-2">
+            {Array.from(
+              { length: Math.ceil(chapters / CHAPTER_PAGE_SIZE) },
+              (_, page) => page,
+            ).map((page) => {
+              const first = page * CHAPTER_PAGE_SIZE + 1;
+              const last = Math.min((page + 1) * CHAPTER_PAGE_SIZE, chapters);
+              return (
+                <button
+                  key={page}
+                  onClick={() => setChapterPage(page)}
+                  className={`min-h-11 rounded-md border px-3 font-terminal text-sm transition-colors ${
+                    page === chapterPage
+                      ? 'border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-900/40 dark:text-amber-200'
+                      : 'border-slate-200 bg-white hover:border-amber-400 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-amber-600'
+                  }`}
+                >
+                  {first}&ndash;{last}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* A fluid grid rather than flex-wrap, so the last row lines up with
+            the rest instead of trailing off raggedly. */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(2.75rem,1fr))] gap-2">
+          {Array.from({ length: chapters }, (_, index) => index + 1)
+            .slice(chapterPage * CHAPTER_PAGE_SIZE, (chapterPage + 1) * CHAPTER_PAGE_SIZE)
+            .map((n) => (
+              <button
+                key={n}
+                onClick={() => setChapter(n)}
+                className="aspect-square w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-terminal text-sm hover:border-amber-400 dark:hover:border-amber-600 transition-colors"
+              >
+                {n}
+              </button>
+            ))}
         </div>
       </div>
     );

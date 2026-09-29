@@ -55,7 +55,11 @@ const TranslationSelector: React.FC<TranslationSelectorProps> = ({
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
 
-          <div className="absolute top-full right-0 mt-2 w-[22rem] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-20 max-h-[32rem] overflow-y-auto">
+          {/* A flat w-[22rem] is wider than a 320px viewport once the
+              container gutter is taken off, so it clipped off-screen. svh
+              rather than vh so iOS's dynamic toolbar cannot hide the last
+              option. */}
+          <div className="absolute top-full -right-1 sm:right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-[22rem] sm:w-[22rem] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl z-20 max-h-[70svh] sm:max-h-[32rem] overflow-y-auto">
             <div className="p-3 border-b border-slate-200 dark:border-slate-700">
               <h3 className="font-terminal text-sm font-bold mb-1">Edition</h3>
               <p className="text-xs opacity-70">
@@ -63,8 +67,8 @@ const TranslationSelector: React.FC<TranslationSelectorProps> = ({
                 all 81 books; others fall back to it for books they do not contain.
               </p>
               <p className="text-[0.7rem] opacity-55 mt-2 leading-relaxed">
-                The three hourly readings above are the same for every visitor, so
-                they always use the standard Ethiopian text.
+                The readings above are the same for every visitor, so they
+                always use the standard Ethiopian text.
               </p>
             </div>
 

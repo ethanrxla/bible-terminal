@@ -34,13 +34,19 @@ export const MODEL_CHAIN: ModelProfile[] = [
     systemPrefix: 'detailed thinking off\n\n',
     params: {},
   },
-  // Last resort. Much faster than Ultra and perfectly capable of an English
-  // interpretation, though far weaker on Ge'ez -- which is why the offline
-  // translation script does not use it. Having it here means a reader gets a
-  // real answer rather than static filler when the larger models are saturated.
+  // Last resort. Much faster than Ultra (~15s against one to three minutes)
+  // and perfectly capable of an English interpretation, though far weaker on
+  // Ge'ez -- which is why the offline translation script does not use it.
+  // Having it here means a reader gets a real answer rather than static filler
+  // when the larger models are saturated.
+  //
+  // This slot previously held nvidia/nemotron-3-nano-30b-a3b, which NVIDIA
+  // retired; it now answers 410 "end of life", so the chain had no working
+  // last resort. Models here go away without warning -- verify a replacement
+  // against the live endpoint before trusting it.
   {
-    id: 'nvidia/nemotron-3-nano-30b-a3b',
-    label: 'Nemotron 3 Nano',
+    id: 'nvidia/nemotron-3-super-120b-a12b',
+    label: 'Nemotron 3 Super',
     systemPrefix: 'detailed thinking off\n\n',
     params: {},
   },

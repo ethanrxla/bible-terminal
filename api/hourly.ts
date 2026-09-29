@@ -1888,7 +1888,32 @@ export async function GET(request: Request): Promise<Response> {
 
   // `hour` is the pre-daily name for this parameter, kept so a tab left open
   // across the rollout keeps working.
-  let requested = url.searchParams.get('key') ?? url.searchParams.get('hour') ?? editionKeyFor(slot);
+  const supplied = url.searchParams.get('key') ?? url.searchParams.get('hour');
+
+  // No key: redirect to the canonical keyed URL rather than serving content
+  // here.
+  //
+  // Serving it directly meant this URL got the slot's cache policy, which for
+  // the passage is a week -- so "give me the current passage" would have
+  // answered with one particular day's reading for seven days. It also means
+  // index.html can fire these requests before the bundle has even downloaded
+  // without needing its own copy of the key arithmetic: the redirect lands on
+  // the keyed URL, the browser caches it there, and the app's own request for
+  // that same URL is then served from cache.
+  if (!supplied) {
+    const canonical = `/api/hourly?key=${editionKeyFor(slot)}&slot=${slot}`;
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: canonical,
+        // Briefly, so the pointer cannot outlive a rollover by long.
+        'Cache-Control': 'public, max-age=30',
+        'Vercel-CDN-Cache-Control': 'public, s-maxage=30',
+      },
+    });
+  }
+
+  let requested = supplied;
 
   // COMPAT: bundles cached before the daily rollout still send an hour key for
   // the passage slot. Coerce rather than reject, so a stale tab sees today's

@@ -4,13 +4,95 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--
+      Ask for the three readings now, before the bundle has downloaded.
+
+      Measured on a throttled phone, these requests did not start until
+      1074ms: not because they depend on anything, but because they were
+      waiting for index.js to arrive and React to mount. Fired here they
+      start at ~270ms.
+
+      The URLs carry no edition key on purpose. /api/hourly redirects to the
+      canonical keyed URL, so this needs no copy of the 6am-Eastern date
+      arithmetic, and the browser caches the response under that keyed URL --
+      which is exactly the URL the app asks for a moment later, so it is
+      served from cache rather than fetched twice.
+
+      Failures are swallowed: this is an optimisation, and the app's own
+      request path already handles retries and errors properly.
+    -->
+    <script>
+      try {
+        for (var i = 0, s = ['verse', 'passage', 'ethiopian']; i < s.length; i++) {
+          fetch('/api/hourly?slot=' + s[i], { credentials: 'same-origin' }).catch(function () {});
+        }
+      } catch (e) {}
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Courier+Prime:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Noto+Sans+Ethiopic:wght@400;600&display=swap" rel="stylesheet">
+    <!-- cdn.jsdelivr.net serves the Ge'ez texts the canon browser reads. -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <!--
+      Only the faces actually rendered. Unused families are never downloaded
+      by the browser anyway, so this saves no bytes -- it is here so the
+      request states what the app really uses. Cinzel is kept at 600, the one
+      weight font-heading applies, so a passage title renders correctly if one
+      ever appears.
+    -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Courier+Prime:wght@400;700&family=EB+Garamond:ital,wght@0,400;1,400&family=Noto+Sans+Ethiopic:wght@400&display=swap" rel="stylesheet">
     <title>Bible Terminal</title>
+
+    <style>
+      /*
+        The shell, inline so something is on screen before the bundle lands.
+        React replaces #root wholesale on mount, so none of this needs
+        unmounting. Colours are duplicated from the Tailwind theme rather than
+        imported -- the stylesheet this would come from is itself one of the
+        things being waited for.
+      */
+      :root { color-scheme: light dark; }
+      body { margin: 0; background: #fffbeb; }
+      @media (prefers-color-scheme: dark) { body { background: #0f172a; } }
+      .boot { max-width: 1280px; margin: 0 auto; padding: 1rem 0.75rem; }
+      .boot-title {
+        font-family: 'Courier Prime', ui-monospace, monospace;
+        font-weight: 700; font-size: 1.25rem; color: #92400e;
+        display: flex; align-items: center; gap: 0.5rem;
+      }
+      @media (prefers-color-scheme: dark) { .boot-title { color: #fcd34d; } }
+      .boot-card {
+        margin-top: 1.5rem; border-radius: 0.5rem; padding: 1.25rem;
+        background: #fff; border: 1px solid #e2e8f0;
+      }
+      @media (prefers-color-scheme: dark) {
+        .boot-card { background: rgba(30,41,59,.5); border-color: rgba(180,83,9,.3); }
+      }
+      .boot-line {
+        height: 0.9rem; border-radius: 0.25rem; margin-bottom: 0.65rem;
+        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+        background-size: 400% 100%; animation: boot-shimmer 1.4s ease infinite;
+      }
+      @media (prefers-color-scheme: dark) {
+        .boot-line { background: linear-gradient(90deg, #1e293b 25%, #334155 37%, #1e293b 63%); background-size: 400% 100%; }
+      }
+      @keyframes boot-shimmer { 0% { background-position: 100% 50% } 100% { background-position: 0 50% } }
+      @media (prefers-reduced-motion: reduce) { .boot-line { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot">
+        <div class="boot-title">Bible Terminal</div>
+        <div class="boot-card">
+          <div class="boot-line" style="width:35%"></div>
+          <div class="boot-line"></div>
+          <div class="boot-line"></div>
+          <div class="boot-line" style="width:80%"></div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

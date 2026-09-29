@@ -1,0 +1,4 @@
+# The WhatsApp bot is a long-running process on its own host, not part of the
+# site build. Keeping it out of the upload avoids shipping Baileys' dependency
+# tree to Vercel on every deploy for code the site never imports.
+bot

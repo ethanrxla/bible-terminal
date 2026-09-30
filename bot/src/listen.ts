@@ -8,7 +8,7 @@
 
 import type { WASocket, proto } from 'baileys';
 import { reply, type ReadingContext, type Turn } from './converse.js';
-import { SpeakingLimit, triggerFor } from './trigger.js';
+import { SpeakingLimit, topicTerms, triggerFor } from './trigger.js';
 
 /** How much of the conversation the model is shown. */
 const CONTEXT_TURNS = 6;
@@ -88,8 +88,26 @@ export function createListener({ groupJid, reading, log }: ListenDeps) {
     const mentioned = (info?.mentionedJid ?? []).some((jid: string) => jid.startsWith(selfId));
     const repliedToBot = Boolean(info?.participant?.startsWith(selfId));
 
-    const trigger = triggerFor({ text, addressedDirectly: mentioned || repliedToBot });
-    if (!trigger) return;
+    // Resolved before the trigger check so a question about the day's
+    // subject -- "what is Babylon?" -- is recognised as one.
+    const context = await reading().catch(() => null);
+    const topics = context
+      ? topicTerms(context.reference, context.text, context.interpretation)
+      : undefined;
+
+    const trigger = triggerFor({
+      text,
+      addressedDirectly: mentioned || repliedToBot,
+      topics,
+    });
+
+    if (!trigger) {
+      // Logged only for questions: silence on a question is the failure mode
+      // worth being able to see afterwards, and it is far too noisy to log
+      // every message the bot correctly ignores.
+      if (text.includes('?')) log(`Ignored question from ${who}: "${text.slice(0, 70)}"`);
+      return;
+    }
 
     // One reply at a time: two questions arriving together should not produce
     // two model calls racing each other into the chat.
@@ -103,7 +121,7 @@ export function createListener({ groupJid, reading, log }: ListenDeps) {
       log(`Answering ${who} (${trigger}).`);
       await socket.sendPresenceUpdate('composing', groupJid);
 
-      const answer = await reply([...history], await reading().catch(() => null));
+      const answer = await reply([...history], context);
       if (!answer) return log('Model returned nothing; staying quiet.');
 
       // Quoting keeps the thread legible when several things are in flight.

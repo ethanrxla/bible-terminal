@@ -10,6 +10,15 @@
  * ignored.
  */
 
+/**
+ * Phones autocorrect ' to the typographic ’, so "Ge’ez" and "today’s reading"
+ * are what actually arrive -- matching straight apostrophes alone missed
+ * every real message.
+ */
+function normalise(text: string): string {
+  return text.replace(/[\u2018\u2019\u02BC]/g, "'").toLowerCase();
+}
+
 /** Books, in the spellings people actually type. */
 const BOOKS = [
   'genesis', 'exodus', 'leviticus', 'numbers', 'deuteronomy', 'joshua', 'judges', 'ruth',
@@ -34,7 +43,44 @@ const SCRIPTURE_WORDS = [
   'verse', 'passage', 'scripture', 'chapter', 'parable', 'gospel', 'epistle',
   'canon', 'testament', 'translation', 'hebrew', 'greek', "ge'ez", 'geez',
   'this reading', "today's reading", 'the reading',
+  // Concepts that are unmistakably scriptural without being proper nouns.
+  'covenant', 'prophecy', 'prophet', 'exile', 'gentile', 'sabbath', 'messiah',
+  'apostle', 'disciple', 'resurrection', 'atonement', 'idolatry', 'repentance',
+  'psalm', 'deuterocanonical', 'apocrypha', 'pseudepigrapha',
 ];
+
+/**
+ * Proper nouns drawn from the day's own reading and interpretation.
+ *
+ * A fixed keyword list cannot anticipate what a study group asks. "What is
+ * Babylon?" is exactly the right question about Isaiah 47 and matched nothing
+ * -- Babylon is not a book, and no list of scripture words was ever going to
+ * contain every place, person and empire the year's readings touch.
+ *
+ * A word counts as a proper noun when it appears capitalised and never
+ * appears lowercase anywhere in the same text. That is self-tuning: "The" and
+ * "Therefore" are discarded because they also occur lowercase, while
+ * "Babylon", "Chaldeans" and "Nineveh" survive. Restricting it to proper
+ * nouns is what keeps the bot out of ordinary conversation -- "what about the
+ * children?" stays unanswered even though the passage mentions children.
+ */
+export function topicTerms(...sources: Array<string | null | undefined>): Set<string> {
+  const text = sources.filter(Boolean).join(' ');
+  const lowercase = new Set<string>();
+  const capitalised = new Set<string>();
+
+  for (const word of text.match(/[A-Za-z][A-Za-z'’-]{2,}/g) ?? []) {
+    const bare = normalise(word);
+    if (/^[A-Z]/.test(word)) capitalised.add(bare);
+    else lowercase.add(bare);
+  }
+
+  const terms = new Set<string>();
+  for (const word of capitalised) {
+    if (word.length >= 4 && !lowercase.has(word)) terms.add(word);
+  }
+  return terms;
+}
 
 /** "John 3:16", "1 Cor 13", "Enoch 1:9". */
 const REFERENCE = /\b(?:[1-3]\s*)?[a-z][a-z'\s]{2,20}\s+\d{1,3}(?::\d{1,3})?/i;
@@ -43,18 +89,11 @@ export interface Candidate {
   text: string;
   /** True when the message quotes or @-mentions the bot. */
   addressedDirectly: boolean;
+  /** Proper nouns from today's reading; see topicTerms. */
+  topics?: Set<string>;
 }
 
 export type TriggerReason = 'addressed' | 'scripture-question' | null;
-
-/**
- * Phones autocorrect ' to the typographic ’, so "Ge’ez" and "today’s reading"
- * are what actually arrive -- matching straight apostrophes alone missed
- * every real message.
- */
-function normalise(text: string): string {
-  return text.replace(/[\u2018\u2019\u02BC]/g, "'").toLowerCase();
-}
 
 export function triggerFor(candidate: Candidate): TriggerReason {
   const text = candidate.text.trim();
@@ -73,7 +112,13 @@ export function triggerFor(candidate: Candidate): TriggerReason {
   // and "flight 2:30?" would qualify.
   const looksLikeReference = mentionsBook && REFERENCE.test(text);
 
-  return mentionsBook || mentionsWord || looksLikeReference ? 'scripture-question' : null;
+  const words = (lower.match(/[a-z][a-z'-]{3,}/g) ?? []);
+  const mentionsTopic = Boolean(candidate.topics?.size) &&
+    words.some((word) => candidate.topics?.has(word));
+
+  return mentionsBook || mentionsWord || looksLikeReference || mentionsTopic
+    ? 'scripture-question'
+    : null;
 }
 
 /**

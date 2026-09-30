@@ -20,6 +20,8 @@ export interface Turn {
 export interface ReadingContext {
   reference: string;
   text: string;
+  /** Included so questions about the interpretation's subject are recognised. */
+  interpretation?: string;
 }
 
 /**

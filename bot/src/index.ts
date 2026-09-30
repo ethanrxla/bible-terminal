@@ -44,7 +44,14 @@ let readingCache: { day: string; value: ReadingContext } | null = null;
 async function currentReading(): Promise<ReadingContext | null> {
   const payload = await fetchDaily(slotForToday(), { attempts: 1 });
   if (readingCache?.day !== payload.day) {
-    readingCache = { day: payload.day, value: { reference: payload.reference, text: payload.text } };
+    readingCache = {
+      day: payload.day,
+      value: {
+        reference: payload.reference,
+        text: payload.text,
+        interpretation: payload.interpretation,
+      },
+    };
   }
   return readingCache.value;
 }

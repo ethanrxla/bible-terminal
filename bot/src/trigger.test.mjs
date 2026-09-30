@@ -87,3 +87,52 @@ test('the daily cap is a real backstop', () => {
   for (let i = 0; i < 5; i += 1) limit.record(1_000_000 + i);
   assert.equal(limit.allows(1_000_100).ok, false);
 });
+
+// --- questions about the day's subject ---------------------------------------
+// The real miss: someone asked "what is babylon?" about Isaiah 47 and the bot
+// said nothing. Babylon is not a book and no keyword list was going to hold
+// every place and empire the year's readings touch.
+import { topicTerms } from '../dist/trigger.js';
+
+const READING = {
+  reference: 'Isaiah 47:5-10',
+  text: 'Sit thou silent, and get thee into darkness, O daughter of the Chaldeans: for thou shalt no more be called, The lady of kingdoms. But these two things shall come to thee in a moment in one day, the loss of children, and widowhood.',
+  interpretation:
+    'The oracle comes from the section called Deutero-Isaiah, dated to the sixth century BCE during the Babylonian exile. It addresses Babylon, the Neo-Babylonian empire centred at Nineveh and later overthrown by Cyrus of Persia.',
+};
+const topics = topicTerms(READING.reference, READING.text, READING.interpretation);
+const about = (text) => triggerFor({ text, addressedDirectly: false, topics });
+
+test('topicTerms picks proper nouns, not ordinary words', () => {
+  for (const want of ['babylon', 'chaldeans', 'isaiah', 'nineveh', 'cyrus', 'persia']) {
+    assert.ok(topics.has(want), `expected topic: ${want}`);
+  }
+  // These appear in the text but are ordinary words, so they must not become
+  // topics -- otherwise family chat about children would summon the bot.
+  for (const reject of ['children', 'darkness', 'silent', 'things', 'lady']) {
+    assert.ok(!topics.has(reject), `should not be a topic: ${reject}`);
+  }
+});
+
+test('answers a question about the day’s subject', () => {
+  assert.equal(about('what is babylon?'), 'scripture-question');
+  assert.equal(about('who were the Chaldeans?'), 'scripture-question');
+  assert.equal(about('why does Cyrus matter here?'), 'scripture-question');
+});
+
+test('still ignores family chat, even sharing words with the reading', () => {
+  for (const text of [
+    'are the children coming tomorrow?',
+    'what time is dinner?',
+    'can you grab milk?',
+    'is it still raining?',
+    'who is driving tonight?',
+    'did the lady next door call?',
+  ]) {
+    assert.equal(about(text), null, `should have stayed quiet: "${text}"`);
+  }
+});
+
+test('a topic word without a question is still not a summons', () => {
+  assert.equal(about('babylon was something else'), null);
+});
